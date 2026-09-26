@@ -23,4 +23,5 @@ COPY app/addon_app.py /usr/local/bin/tuya-camera-addon
 COPY run.sh /run.sh
 RUN chmod 0755 /run.sh /usr/local/bin/tuya-camera-addon
 
+WORKDIR /data
 CMD ["/run.sh"]
