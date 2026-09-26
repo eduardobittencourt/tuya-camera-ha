@@ -1,6 +1,6 @@
 name: "Tuya Camera Bridge"
 description: "Standalone Tuya camera bridge with ONVIF discovery for Home Assistant"
-version: "0.2.11"
+version: "0.2.12"
 slug: "tuya_camera_bridge"
 url: "https://github.com/eduardobittencourt/tuya-camera-ha"
 arch:

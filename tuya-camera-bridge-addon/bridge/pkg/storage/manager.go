@@ -186,19 +186,30 @@ func (sm *StorageManager) UpdateCamerasForUser(userKey string, cameras []CameraI
 		return err
 	}
 
-	// Remove existing cameras for this user
-	var newCameras []CameraInfo
-	for _, cam := range registry.Cameras {
-		if cam.UserKey != userKey {
-			newCameras = append(newCameras, cam)
-		}
-	}
-
-	// Add new cameras
-	newCameras = append(newCameras, cameras...)
-	registry.Cameras = newCameras
+	registry.Cameras = mergeCameraRegistry(registry.Cameras, userKey, cameras)
 
 	return sm.SaveCameraRegistry(registry)
+}
+
+// mergeCameraRegistry replaces a user's camera list and also discards stale
+// records for the same physical devices. A login identifier can change between
+// bridge versions (for example after an encoding fix), but a device ID remains
+// stable. Keeping both records can make the RTSP server select an older entry
+// without the current codec capabilities.
+func mergeCameraRegistry(existing []CameraInfo, userKey string, cameras []CameraInfo) []CameraInfo {
+	replacedDeviceIDs := make(map[string]struct{}, len(cameras))
+	for _, camera := range cameras {
+		replacedDeviceIDs[camera.DeviceID] = struct{}{}
+	}
+
+	merged := make([]CameraInfo, 0, len(existing)+len(cameras))
+	for _, camera := range existing {
+		_, deviceReplaced := replacedDeviceIDs[camera.DeviceID]
+		if camera.UserKey != userKey && !deviceReplaced {
+			merged = append(merged, camera)
+		}
+	}
+	return append(merged, cameras...)
 }
 
 func (sm *StorageManager) removeCamerasForUser(userKey string) error {
