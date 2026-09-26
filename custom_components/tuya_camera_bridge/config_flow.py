@@ -154,6 +154,13 @@ class TuyaCameraBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return await self.async_step_reauth_confirm()
 
+    async def async_step_reconfigure(self, user_input=None):
+        """Allow a user-initiated session refresh from the config entry UI."""
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm(user_input)
+
     async def async_step_reauth_confirm(self, user_input=None):
         """Replace only session and app-routing fields for the existing camera."""
         if self._reauth_entry is None:
