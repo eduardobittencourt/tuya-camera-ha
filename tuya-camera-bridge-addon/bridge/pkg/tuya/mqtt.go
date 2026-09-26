@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/core"
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/utils"
+	"net/url"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -104,7 +105,11 @@ func NewMobileMqttClient(config *MobileMQTTConfig) (*MQTTClient, error) {
 	opts.SetKeepAlive(60 * time.Second)
 	opts.SetCleanSession(true)
 
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	serverName, err := mqttTLSServerName(config.BrokerURL)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: serverName}
 	opts.SetTLSConfig(tlsConfig)
 
 	client.mqtt = mqtt.NewClient(opts)
@@ -113,6 +118,18 @@ func NewMobileMqttClient(config *MobileMQTTConfig) (*MQTTClient, error) {
 	}
 
 	return client, nil
+}
+
+func mqttTLSServerName(brokerURL string) (string, error) {
+	parsed, err := url.Parse(brokerURL)
+	if err != nil {
+		return "", fmt.Errorf("parse MQTT broker URL: %w", err)
+	}
+	serverName := parsed.Hostname()
+	if serverName == "" {
+		return "", fmt.Errorf("MQTT broker URL has no host")
+	}
+	return serverName, nil
 }
 
 func (c *MQTTClient) Stop() {

@@ -177,7 +177,10 @@ func TestEncryptedMobileCallMatchesPythonClientProtocol(t *testing.T) {
 			t.Errorf("sign = %q, want %q", gotSign, wantSign)
 		}
 
-		encrypted, err := encryptMobilePayload(key, map[string]interface{}{"time": 123})
+		encrypted, err := encryptMobilePayload(key, map[string]interface{}{
+			"success": true,
+			"result":  map[string]interface{}{"time": 123},
+		})
 		if err != nil {
 			t.Errorf("encrypt response: %v", err)
 		}
@@ -192,6 +195,25 @@ func TestEncryptedMobileCallMatchesPythonClientProtocol(t *testing.T) {
 	}
 	if string(raw) != `{"time":123}` {
 		t.Errorf("result = %s", raw)
+	}
+}
+
+func TestUnwrapEncryptedResultKeepsDirectPayload(t *testing.T) {
+	raw, err := unwrapEncryptedResult(json.RawMessage(`{"time":123}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != `{"time":123}` {
+		t.Errorf("result = %s", raw)
+	}
+}
+
+func TestUnwrapEncryptedResultSurfacesInnerError(t *testing.T) {
+	_, err := unwrapEncryptedResult(json.RawMessage(
+		`{"success":false,"errorCode":"NO_AUTH","errorMsg":"No access"}`,
+	))
+	if err == nil || !strings.Contains(err.Error(), "NO_AUTH") {
+		t.Fatalf("expected inner API error, got %v", err)
 	}
 }
 

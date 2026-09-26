@@ -382,7 +382,38 @@ func parseEncryptedAPIResponse(body, key []byte) (json.RawMessage, error) {
 	if err := json.Unmarshal(envelope.Result, &encrypted); err != nil {
 		return nil, fmt.Errorf("encrypted API result is not a string: %w", err)
 	}
-	return decryptMobilePayload(key, encrypted)
+	decrypted, err := decryptMobilePayload(key, encrypted)
+	if err != nil {
+		return nil, err
+	}
+	return unwrapEncryptedResult(decrypted)
+}
+
+func unwrapEncryptedResult(raw json.RawMessage) (json.RawMessage, error) {
+	var envelope struct {
+		Result    json.RawMessage `json:"result"`
+		Success   *bool           `json:"success,omitempty"`
+		ErrorCode string          `json:"errorCode,omitempty"`
+		ErrorMsg  string          `json:"errorMsg,omitempty"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, fmt.Errorf("decrypted JSON decode error: %w", err)
+	}
+	if envelope.Success != nil && !*envelope.Success {
+		code := envelope.ErrorCode
+		if code == "" {
+			code = "unknown"
+		}
+		message := envelope.ErrorMsg
+		if message == "" {
+			message = "no result"
+		}
+		return nil, fmt.Errorf("API error: %s (code: %s)", message, code)
+	}
+	if len(envelope.Result) != 0 && !bytes.Equal(envelope.Result, []byte("null")) {
+		return envelope.Result, nil
+	}
+	return raw, nil
 }
 
 // parseAPIResponse decodes a Tuya api.json response, surfacing the machine-readable
