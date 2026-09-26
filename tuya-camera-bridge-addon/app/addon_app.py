@@ -30,6 +30,19 @@ RESTART_MAX_DELAY = 60.0
 STABLE_RUNTIME = 60.0
 
 
+class CapturingTuyaPasswordClient(TuyaPasswordClient):
+    """Retain non-password login metadata omitted by tuya-mobile 1.2.0."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.login_result: dict[str, Any] | None = None
+
+    async def _submit_login(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        result = await super()._submit_login(*args, **kwargs)
+        self.login_result = dict(result)
+        return result
+
+
 def endpoint_for_country_code(country_code: str) -> str:
     code = country_code.strip().lstrip("+")
     if code in {
@@ -91,7 +104,7 @@ async def login_and_build_config(
     profile = get_mobile_app_profile(selected)
     timeout = aiohttp.ClientTimeout(total=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        client = TuyaPasswordClient.for_application(
+        client = CapturingTuyaPasswordClient.for_application(
             selected,
             session,
             username=username,

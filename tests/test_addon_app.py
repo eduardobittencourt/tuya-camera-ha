@@ -42,6 +42,17 @@ def test_account_metadata_supports_released_client_without_login_result() -> Non
     )
 
 
+def test_account_metadata_prefers_captured_login_metadata() -> None:
+    client = type(
+        "Client",
+        (),
+        {"login_result": {"partnerIdentity": "login-partner", "timezone": "UTC"}},
+    )()
+    user_info = {"partnerIdentity": "user-partner"}
+
+    assert addon_app.account_metadata(client, user_info) == ("login-partner", "UTC")
+
+
 def test_write_config_is_atomic_and_private(tmp_path, monkeypatch) -> None:
     path = tmp_path / "bridge.json"
     monkeypatch.setattr(addon_app, "DATA_DIR", tmp_path)
