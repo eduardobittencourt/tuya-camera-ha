@@ -1,6 +1,6 @@
 name: "Tuya Camera Bridge"
-description: "Tuya mobile WebRTC to RTSP bridge for the companion Home Assistant integration"
-version: "0.1.9"
+description: "Standalone Tuya camera bridge with ONVIF discovery for Home Assistant"
+version: "0.2.0"
 slug: "tuya_camera_bridge"
 url: "https://github.com/eduardobittencourt/tuya-camera-ha"
 arch:
@@ -10,13 +10,12 @@ homeassistant: "2025.6.0"
 startup: "application"
 boot: "auto"
 host_network: true
-apparmor: false
+apparmor: true
 init: false
+ingress: true
+ingress_port: 8099
+panel_icon: "mdi:cctv"
+panel_admin: true
+stage: experimental
 options: {}
 schema: {}
-environment:
-  WAIT_FOR_CONFIG: "true"
-map:
-  - type: homeassistant_config
-    read_only: false
-    path: /config

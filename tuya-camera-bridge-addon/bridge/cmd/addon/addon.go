@@ -1,17 +1,19 @@
 package addon
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/core"
+	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/onvifproxy"
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/rtsp"
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/storage"
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/tuya"
@@ -38,6 +40,7 @@ type BridgeConfig struct {
 	Platform    string   `json:"platform"`
 	AppRN       string   `json:"app_rn_version"`
 	ET          string   `json:"et"`
+	Timezone    string   `json:"timezone"`
 	Talkback    bool     `json:"talkback"`
 	BridgePort  int      `json:"bridge_port"`
 	Cameras     []Camera `json:"cameras"`
@@ -136,6 +139,16 @@ func validateConfig(cfg BridgeConfig) error {
 	return nil
 }
 
+func validateConfigForMode(cfg BridgeConfig, externalSource bool) error {
+	if externalSource {
+		if len(cfg.Cameras) == 0 {
+			return fmt.Errorf("cameras list is empty: nothing to serve")
+		}
+		return nil
+	}
+	return validateConfig(cfg)
+}
+
 var storageManager *storage.StorageManager
 
 func SetStorageManager(sm *storage.StorageManager) {
@@ -154,82 +167,34 @@ Example:
 		RunE: runAddon,
 	}
 	cmd.Flags().String("config", "", "Path to the bridge config JSON written by the HA integration")
+	cmd.Flags().Bool("onvif", false, "Expose each camera as an ONVIF H.264 device")
+	cmd.Flags().Int("onvif-port", 8081, "First ONVIF HTTP port (one consecutive port per camera)")
+	cmd.Flags().Int("onvif-rtsp-port", 8554, "RTSP port for ONVIF H.264 streams")
+	cmd.Flags().String("onvif-username", "admin", "ONVIF username")
+	cmd.Flags().String("onvif-password", "", "ONVIF password")
+	cmd.Flags().String("data-dir", "/data", "Persistent add-on data directory")
+	cmd.Flags().Bool("external-source", false, "Use an already-running Tuya RTSP source (diagnostic mode)")
+	cmd.Flags().String("source-host", "127.0.0.1", "Host of the Tuya RTSP source")
 	cmd.MarkFlagRequired("config")
 	return cmd
 }
 
 func runAddon(cmd *cobra.Command, args []string) error {
 	cfgPath, _ := cmd.Flags().GetString("config")
+	onvifEnabled, _ := cmd.Flags().GetBool("onvif")
+	externalSource, _ := cmd.Flags().GetBool("external-source")
 
 	cfg, err := loadConfig(cfgPath)
 	if err != nil {
 		return err
 	}
-	if err := validateConfig(cfg); err != nil {
+	if err := validateConfigForMode(cfg, externalSource); err != nil {
 		return fmt.Errorf("invalid config %s: %w", cfgPath, err)
 	}
 
 	port := cfg.BridgePort
 	if port == 0 {
 		port = 38554
-	}
-
-	apiHost := tuya.NormalizeAPIHost(cfg.APIHost)
-	chKey := cfg.ChKey
-	if chKey == "" {
-		chKey = "071d81fa"
-	}
-	client := tuya.NewMobileSDKClient(cfg.SigningKey, cfg.SID, cfg.AppKey, cfg.DeviceID, chKey)
-	client.BaseURL = tuya.APIBaseURL(apiHost)
-	client.Ecode = cfg.Ecode
-	client.PartnerIdentity = cfg.Partner
-	client.PackageName = cfg.PackageName
-	client.ApplyAppProfile(tuya.AppProfile{
-		AppVersion:        cfg.AppVersion,
-		SDKVersion:        cfg.SDKVersion,
-		DeviceCoreVersion: cfg.DeviceCore,
-		TTID:              cfg.TTID,
-		Channel:           cfg.Channel,
-		OSSystem:          cfg.OSSystem,
-		Platform:          cfg.Platform,
-		AppRNVersion:      cfg.AppRN,
-		ET:                cfg.ET,
-	})
-
-	core.Logger.Info().Msgf("Tuya API host: %s", apiHost)
-	core.Logger.Info().Msg("Verifying API access...")
-	if _, err := client.Call("smartlife.p.time.get", "1.0", nil); err != nil {
-		return fmt.Errorf("API verification failed: %w", err)
-	}
-	core.Logger.Info().Msg("API access OK")
-
-	userInfo, err := client.GetUserInfo()
-	if err != nil {
-		return fmt.Errorf("get user info: %w", err)
-	}
-	core.Logger.Info().Msgf("User: %s (%s)", userInfo.Nickname, utils.MaskEmail(userInfo.Email))
-	client.UID = userInfo.ID
-
-	userKey := "addon_" + strings.ReplaceAll(strings.ReplaceAll(userInfo.Email, "@", "_at_"), ".", "_")
-	user := &storage.UserSession{
-		Email:  userInfo.Email,
-		Region: "addon",
-		SessionData: &tuya.SessionData{
-			LoginResult: &tuya.LoginResult{
-				Uid:      userInfo.ID,
-				Email:    userInfo.Email,
-				Nickname: userInfo.Nickname,
-				Domain:   userInfo.Domain,
-			},
-			ServerHost: apiHost,
-			Region:     "addon",
-			UserEmail:  userInfo.Email,
-		},
-		LastRefresh: time.Now(),
-		UserKey:     userKey,
-	}
-	if err := storageManager.SaveUser("addon", userInfo.Email, user.SessionData); err != nil {
-		core.Logger.Warn().Msgf("Could not save user session: %v", err)
 	}
 
 	camsWithPath := assignPaths(cfg.Cameras)
@@ -239,48 +204,146 @@ func runAddon(cmd *cobra.Command, args []string) error {
 
 	infos := make([]storage.CameraInfo, 0, len(camsWithPath))
 	pathLog := make([]string, 0, len(camsWithPath))
-	for _, c := range camsWithPath {
-		skill := ""
-		if err := client.P2PPreLink(c.ID); err != nil {
-			core.Logger.Warn().Err(err).Msgf("P2P pre-link failed while loading capabilities for %s", c.Name)
-		}
-		if config, err := client.GetWebRTCConfig(c.ID); err != nil {
-			core.Logger.Warn().Err(err).Msgf("Could not load camera capabilities for RTSP SDP: %s", c.Name)
-		} else {
-			skill = config.Result.Skill
-		}
-		infos = append(infos, storage.CameraInfo{
-			DeviceID:   c.ID,
-			DeviceName: c.Name,
-			Category:   "sp",
-			ProductID:  c.ProductID,
-			RTSPPath:   c.Path,
-			UserKey:    userKey,
-			Skill:      skill,
-		})
-		pathLog = append(pathLog, c.Path)
-		core.Logger.Info().Msgf("Camera registered: id=%s name=%s path=%s", c.ID, c.Name, c.Path)
-	}
-	if err := storageManager.UpdateCamerasForUser(userKey, infos); err != nil {
-		core.Logger.Warn().Msgf("Could not save cameras: %v", err)
+	for _, camera := range camsWithPath {
+		pathLog = append(pathLog, camera.Path)
 	}
 
-	server := rtsp.NewRTSPServer(port, storageManager)
-	server.MobileClient = client
-	server.Talkback = cfg.Talkback
-	if cfg.Talkback {
-		core.Logger.Info().Msg("Two-way audio enabled: streams will ask the camera for talkback")
+	var client *tuya.MobileSDKClient
+	if !externalSource {
+		apiHost := tuya.NormalizeAPIHost(cfg.APIHost)
+		chKey := cfg.ChKey
+		if chKey == "" {
+			chKey = "071d81fa"
+		}
+		client = tuya.NewMobileSDKClient(cfg.SigningKey, cfg.SID, cfg.AppKey, cfg.DeviceID, chKey)
+		client.BaseURL = tuya.APIBaseURL(apiHost)
+		client.Ecode = cfg.Ecode
+		client.PartnerIdentity = cfg.Partner
+		client.PackageName = cfg.PackageName
+		client.ApplyAppProfile(tuya.AppProfile{
+			AppVersion: cfg.AppVersion, SDKVersion: cfg.SDKVersion, DeviceCoreVersion: cfg.DeviceCore,
+			TTID: cfg.TTID, Channel: cfg.Channel, OSSystem: cfg.OSSystem, Platform: cfg.Platform,
+			AppRNVersion: cfg.AppRN, ET: cfg.ET,
+		})
+		if cfg.Timezone != "" {
+			client.Timezone = cfg.Timezone
+		}
+
+		core.Logger.Info().Msgf("Tuya API host: %s", apiHost)
+		if _, err := client.Call("smartlife.p.time.get", "1.0", nil); err != nil {
+			return fmt.Errorf("API verification failed: %w", err)
+		}
+		userInfo, err := client.GetUserInfo()
+		if err != nil {
+			return fmt.Errorf("get user info: %w", err)
+		}
+		core.Logger.Info().Msgf("User: %s (%s)", userInfo.Nickname, utils.MaskEmail(userInfo.Email))
+		client.UID = userInfo.ID
+		userKey := "addon_" + strings.ReplaceAll(strings.ReplaceAll(userInfo.Email, "@", "_at_"), ".", "_")
+		userSession := &tuya.SessionData{
+			LoginResult: &tuya.LoginResult{Uid: userInfo.ID, Email: userInfo.Email, Nickname: userInfo.Nickname, Domain: userInfo.Domain},
+			ServerHost:  apiHost, Region: "addon", UserEmail: userInfo.Email,
+		}
+		if err := storageManager.SaveUser("addon", userInfo.Email, userSession); err != nil {
+			core.Logger.Warn().Msgf("Could not save user session: %v", err)
+		}
+		for _, camera := range camsWithPath {
+			skill := ""
+			if err := client.P2PPreLink(camera.ID); err != nil {
+				core.Logger.Warn().Err(err).Msgf("P2P pre-link failed while loading capabilities for %s", camera.Name)
+			}
+			if config, err := client.GetWebRTCConfig(camera.ID); err != nil {
+				core.Logger.Warn().Err(err).Msgf("Could not load camera capabilities for RTSP SDP: %s", camera.Name)
+			} else {
+				skill = config.Result.Skill
+			}
+			infos = append(infos, storage.CameraInfo{
+				DeviceID: camera.ID, DeviceName: camera.Name, Category: "sp", ProductID: camera.ProductID,
+				RTSPPath: camera.Path, UserKey: userKey, Skill: skill,
+			})
+			core.Logger.Info().Msgf("Camera registered: id=%s name=%s path=%s", camera.ID, camera.Name, camera.Path)
+		}
+		if err := storageManager.UpdateCamerasForUser(userKey, infos); err != nil {
+			core.Logger.Warn().Msgf("Could not save cameras: %v", err)
+		}
+	} else {
+		infos = make([]storage.CameraInfo, len(camsWithPath))
 	}
-	if err := server.Start(); err != nil {
-		return fmt.Errorf("start RTSP server: %w", err)
+
+	var rtspServer *rtsp.RTSPServer
+	if !externalSource {
+		rtspServer = rtsp.NewRTSPServer(port, storageManager)
+		rtspServer.MobileClient = client
+		rtspServer.Talkback = cfg.Talkback
+		if cfg.Talkback {
+			core.Logger.Info().Msg("Two-way audio enabled: streams will ask the camera for talkback")
+		}
+		if err := rtspServer.Start(); err != nil {
+			return fmt.Errorf("start RTSP server: %w", err)
+		}
+		defer rtspServer.Stop()
+		core.Logger.Info().Msgf("Serving %d cameras on port %d: %s", len(infos), port, strings.Join(pathLog, " "))
+	} else {
+		core.Logger.Info().Msgf("Using external Tuya RTSP source on port %d: %s", port, strings.Join(pathLog, " "))
 	}
-	core.Logger.Info().Msgf("Serving %d cameras on port %d: %s", len(infos), port, strings.Join(pathLog, " "))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var gateway *onvifproxy.Gateway
+	if onvifEnabled {
+		onvifPort, _ := cmd.Flags().GetInt("onvif-port")
+		onvifRTSPPort, _ := cmd.Flags().GetInt("onvif-rtsp-port")
+		onvifUsername, _ := cmd.Flags().GetString("onvif-username")
+		onvifPassword, _ := cmd.Flags().GetString("onvif-password")
+		dataDir, _ := cmd.Flags().GetString("data-dir")
+		sourceHost, _ := cmd.Flags().GetString("source-host")
+		proxyCameras := make([]onvifproxy.Camera, 0, len(camsWithPath))
+		for _, camera := range camsWithPath {
+			proxyCameras = append(proxyCameras, onvifproxy.Camera{
+				ID: camera.ID, Name: camera.Name, SourcePath: camera.Path,
+				ProxyPath: proxyPath(camera.ID),
+			})
+		}
+		gateway, err = onvifproxy.New(onvifproxy.Config{
+			Cameras: proxyCameras, SourceHost: sourceHost, SourcePort: port, RTSPPort: onvifRTSPPort,
+			ONVIFBasePort: onvifPort, Username: onvifUsername, Password: onvifPassword,
+			DataDir: dataDir,
+		})
+		if err != nil {
+			return fmt.Errorf("configure ONVIF gateway: %w", err)
+		}
+		if err := gateway.Start(ctx); err != nil {
+			return fmt.Errorf("start ONVIF gateway: %w", err)
+		}
+		defer gateway.Stop()
+		core.Logger.Info().Msgf("ONVIF gateway enabled on ports %d-%d; H.264 RTSP on %d", onvifPort, onvifPort+len(proxyCameras)-1, onvifRTSPPort)
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	if gateway == nil {
+		<-sigChan
+	} else {
+		select {
+		case <-sigChan:
+		case gatewayErr := <-gateway.Errors():
+			return gatewayErr
+		}
+	}
 
 	core.Logger.Info().Msg("Shutting down...")
-	server.Stop()
 	return nil
+}
+
+var nonPathCharacter = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+
+func proxyPath(cameraID string) string {
+	id := nonPathCharacter.ReplaceAllString(cameraID, "")
+	if len(id) > 16 {
+		id = id[:16]
+	}
+	if id == "" {
+		id = "camera"
+	}
+	return "tuya_" + id
 }

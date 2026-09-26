@@ -113,6 +113,17 @@ func TestNewMobileSDKClientDefaultsToEU(t *testing.T) {
 	if c.BaseURL != "https://a1.tuyaeu.com/api.json" {
 		t.Errorf("BaseURL = %q, want the EU host by default", c.BaseURL)
 	}
+	if c.Timezone != "UTC" {
+		t.Errorf("Timezone = %q, want UTC by default", c.Timezone)
+	}
+}
+
+func TestBuildParamsUsesConfiguredTimezone(t *testing.T) {
+	c := NewMobileSDKClient("sk", "sid", "ak", "dev", "ch")
+	c.Timezone = "America/Sao_Paulo"
+	if got := c.buildParams("test.action", "1.0", nil)["timeZoneId"]; got != "America/Sao_Paulo" {
+		t.Errorf("timeZoneId = %q", got)
+	}
 }
 
 // captureRequest points a client at a test server and returns the form values

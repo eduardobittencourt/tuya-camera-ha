@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "custom_components/tuya_camera_bridge/vendor", "tuya-camera-bridge-addon/app"]
 
 [tool.ruff]
 line-length = 120

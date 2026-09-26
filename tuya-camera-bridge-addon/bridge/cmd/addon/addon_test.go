@@ -363,3 +363,23 @@ func TestLoadConfig_TalkbackHonoured(t *testing.T) {
 		t.Error("talkback true in the config must be honoured")
 	}
 }
+
+func TestLoadConfig_Timezone(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "bridge.json")
+	body := `{
+	  "signing_key": "sk", "sid": "S", "ecode": "E", "partner": "P",
+	  "app_key": "AK", "device_id": "D", "timezone": "America/Sao_Paulo",
+	  "cameras": [{"camera_id": "abc123", "camera_name": "Erik"}]
+	}`
+	if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loadConfig(p)
+	if err != nil {
+		t.Fatalf("loadConfig: %v", err)
+	}
+	if cfg.Timezone != "America/Sao_Paulo" {
+		t.Errorf("Timezone = %q", cfg.Timezone)
+	}
+}

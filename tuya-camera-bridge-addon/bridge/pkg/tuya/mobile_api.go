@@ -37,6 +37,7 @@ type MobileSDKClient struct {
 	PartnerIdentity   string
 	UID               string
 	PackageName       string
+	Timezone          string
 }
 
 var signKeyWhitelist = []string{
@@ -88,6 +89,7 @@ func NewMobileSDKClient(signingKey, sid, appKey, deviceID, chKey string) *Mobile
 		Platform:          "tuya_bridge",
 		AppRNVersion:      "5.92",
 		ET:                "0.0.1",
+		Timezone:          "UTC",
 	}
 }
 
@@ -200,7 +202,7 @@ func (c *MobileSDKClient) buildParams(action, version string, postData interface
 		"requestId":         uuid.New().String(),
 		"sdkVersion":        c.SDKVersion,
 		"sid":               c.SID,
-		"timeZoneId":        "Europe/Rome",
+		"timeZoneId":        c.Timezone,
 		"ttid":              c.TTID,
 	}
 
