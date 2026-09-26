@@ -27,21 +27,34 @@ def test_walk_yields_nested_mappings() -> None:
     assert {item.get("camera") for item in values} == {None, "one", "two"}
 
 
-def test_compatible_cameras_rejects_devices_without_camera_category() -> None:
+def test_compatible_cameras_probes_devices_without_category() -> None:
+    class FakeClient:
+        async def _call(self, action, payload):
+            assert action == "smartlife.m.rtc.config.get"
+            if payload["devId"] == "uncategorized-camera":
+                return {"p2pConfig": {}}
+            raise RuntimeError("not a camera")
+
     response = {
         "result": [
             {"devId": "camera", "name": "Kitchen", "category": "sp"},
             {"devId": "light", "name": "Hall light", "category": "dj"},
-            {"devId": "nested", "name": "Metadata without category"},
+            {"devId": "uncategorized-camera", "name": "Nursery"},
+            {"devId": "uncategorized-light", "name": "Desk light"},
         ]
     }
 
-    assert addon_app.compatible_cameras(response) == {
+    assert asyncio.run(addon_app.compatible_cameras(FakeClient(), response)) == {
         "camera": {
             "camera_id": "camera",
             "camera_name": "Kitchen",
             "product_id": "",
-        }
+        },
+        "uncategorized-camera": {
+            "camera_id": "uncategorized-camera",
+            "camera_name": "Nursery",
+            "product_id": "",
+        },
     }
 
 

@@ -97,15 +97,34 @@ def account_metadata(client: Any, user_info: Any) -> tuple[str, str]:
     return partner, timezone
 
 
-def compatible_cameras(response: Any) -> dict[str, dict[str, str]]:
+async def supports_webrtc(client: Any, device_id: str) -> bool:
+    try:
+        response = await client._call(
+            "smartlife.m.rtc.config.get", {"devId": device_id}
+        )
+    except RuntimeError:
+        return False
+    if not isinstance(response, dict):
+        return False
+    if response.get("success") is True and isinstance(response.get("result"), dict):
+        return True
+    return "p2pConfig" in response or "skill" in response
+
+
+async def compatible_cameras(
+    client: Any, response: Any
+) -> dict[str, dict[str, str]]:
     cameras: dict[str, dict[str, str]] = {}
     for item in walk(response):
         category = str(item.get("category") or item.get("categoryCode") or "")
-        if category not in CAMERA_CATEGORIES:
-            continue
         device_id = item.get("devId") or item.get("deviceId")
         name = item.get("name") or item.get("deviceName")
         if not device_id or not name:
+            continue
+        if category:
+            if category not in CAMERA_CATEGORIES:
+                continue
+        elif not await supports_webrtc(client, str(device_id)):
             continue
         cameras[str(device_id)] = {
             "camera_id": str(device_id),
@@ -146,7 +165,7 @@ async def login_and_build_config(
             response = await client._call(
                 "m.life.my.group.device.list", {"gid": gid}, version="2.2"
             )
-            cameras.update(compatible_cameras(response))
+            cameras.update(await compatible_cameras(client, response))
         if not cameras:
             raise RuntimeError("No compatible Tuya cameras were found in this account")
 
