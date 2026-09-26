@@ -216,22 +216,10 @@ func (g *Gateway) startCamera(ctx context.Context, camera Camera, port int, adve
 }
 
 func serveONVIF(ctx context.Context, next http.Handler, listener net.Listener, hardwareID, address string) error {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "invalid SOAP request", http.StatusBadRequest)
-			return
-		}
-		r.Body = io.NopCloser(bytes.NewReader(body))
-		if bytes.Contains(body, []byte("GetNetworkInterfaces")) {
-			w.Header().Set("Content-Type", "application/soap+xml; charset=utf-8")
-			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
-<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema"><s:Body><tds:GetNetworkInterfacesResponse><tds:NetworkInterfaces token="lan"><tt:Enabled>true</tt:Enabled><tt:Info><tt:Name>lan</tt:Name><tt:HwAddress>%s</tt:HwAddress><tt:MTU>1500</tt:MTU></tt:Info><tt:IPv4><tt:Enabled>true</tt:Enabled><tt:Config><tt:Manual><tt:Address>%s</tt:Address><tt:PrefixLength>24</tt:PrefixLength></tt:Manual><tt:DHCP>true</tt:DHCP></tt:Config></tt:IPv4></tds:NetworkInterfaces></tds:GetNetworkInterfacesResponse></s:Body></s:Envelope>`, hardwareID, address)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-	httpServer := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	httpServer := &http.Server{
+		Handler:           onvifCompatibilityHandler(next, hardwareID, address),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 	errorChannel := make(chan error, 1)
 	go func() { errorChannel <- httpServer.Serve(listener) }()
 	select {
@@ -245,6 +233,30 @@ func serveONVIF(ctx context.Context, next http.Handler, listener net.Listener, h
 		}
 		return err
 	}
+}
+
+func onvifCompatibilityHandler(next http.Handler, hardwareID, address string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "invalid SOAP request", http.StatusBadRequest)
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		if strings.HasSuffix(r.URL.Path, "/media_service") && bytes.Contains(body, []byte("GetServiceCapabilities")) {
+			w.Header().Set("Content-Type", "application/soap+xml; charset=utf-8")
+			_, _ = io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:trt="http://www.onvif.org/ver10/media/wsdl"><s:Body><trt:GetServiceCapabilitiesResponse><trt:Capabilities SnapshotUri="true" Rotation="false" VideoSourceMode="false" OSD="false"/></trt:GetServiceCapabilitiesResponse></s:Body></s:Envelope>`)
+			return
+		}
+		if bytes.Contains(body, []byte("GetNetworkInterfaces")) {
+			w.Header().Set("Content-Type", "application/soap+xml; charset=utf-8")
+			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema"><s:Body><tds:GetNetworkInterfacesResponse><tds:NetworkInterfaces token="lan"><tt:Enabled>true</tt:Enabled><tt:Info><tt:Name>lan</tt:Name><tt:HwAddress>%s</tt:HwAddress><tt:MTU>1500</tt:MTU></tt:Info><tt:IPv4><tt:Enabled>true</tt:Enabled><tt:Config><tt:Manual><tt:Address>%s</tt:Address><tt:PrefixLength>24</tt:PrefixLength></tt:Manual><tt:DHCP>true</tt:DHCP></tt:Config></tt:IPv4></tds:NetworkInterfaces></tds:GetNetworkInterfacesResponse></s:Body></s:Envelope>`, hardwareID, address)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func multicastInterface() string {

@@ -2,12 +2,56 @@ package onvifproxy
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestMediaServiceAdvertisesSnapshotURI(t *testing.T) {
+	nextCalled := false
+	handler := onvifCompatibilityHandler(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		nextCalled = true
+	}), "hardware-id", "192.0.2.10")
+	request := httptest.NewRequest(http.MethodPost, "/onvif/media_service", strings.NewReader(
+		`<trt:GetServiceCapabilities xmlns:trt="http://www.onvif.org/ver10/media/wsdl"/>`,
+	))
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if nextCalled {
+		t.Fatal("media capability request was delegated")
+	}
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
+	}
+	body, err := io.ReadAll(response.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `SnapshotUri="true"`) {
+		t.Fatalf("response does not advertise snapshots: %s", body)
+	}
+}
+
+func TestCompatibilityHandlerDelegatesOtherMediaRequests(t *testing.T) {
+	handler := onvifCompatibilityHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}), "hardware-id", "192.0.2.10")
+	request := httptest.NewRequest(http.MethodPost, "/onvif/media_service", strings.NewReader(`<trt:GetProfiles/>`))
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", response.Code)
+	}
+}
 
 func TestNewRejectsIncompleteCamera(t *testing.T) {
 	_, err := New(Config{Cameras: []Camera{{ID: "id", Name: "Kitchen"}}})
