@@ -27,6 +27,21 @@ def test_walk_yields_nested_mappings() -> None:
     assert {item.get("camera") for item in values} == {None, "one", "two"}
 
 
+def test_account_metadata_supports_released_client_without_login_result() -> None:
+    client = object()
+    user_info = {
+        "result": {
+            "partnerIdentity": "partner",
+            "timezoneId": "America/Sao_Paulo",
+        }
+    }
+
+    assert addon_app.account_metadata(client, user_info) == (
+        "partner",
+        "America/Sao_Paulo",
+    )
+
+
 def test_write_config_is_atomic_and_private(tmp_path, monkeypatch) -> None:
     path = tmp_path / "bridge.json"
     monkeypatch.setattr(addon_app, "DATA_DIR", tmp_path)

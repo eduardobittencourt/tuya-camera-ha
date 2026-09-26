@@ -63,6 +63,27 @@ def walk(value: Any):
             yield from walk(child)
 
 
+def account_metadata(client: Any, user_info: Any) -> tuple[str, str]:
+    sources = [getattr(client, "login_result", None) or {}, user_info]
+    partner = next(
+        (
+            str(item.get("partnerIdentity") or item.get("partnerId"))
+            for item in walk(sources)
+            if item.get("partnerIdentity") or item.get("partnerId")
+        ),
+        "",
+    )
+    timezone = next(
+        (
+            str(item.get("timezoneId") or item.get("timeZoneId") or item.get("timezone"))
+            for item in walk(sources)
+            if item.get("timezoneId") or item.get("timeZoneId") or item.get("timezone")
+        ),
+        os.environ.get("TZ", "UTC"),
+    )
+    return partner, timezone
+
+
 async def login_and_build_config(
     username: str, password: str, country_code: str, application: str
 ) -> dict[str, Any]:
@@ -79,25 +100,9 @@ async def login_and_build_config(
         )
         mobile_session = await client.login_with_password(password, country_code)
         user_info = await client._call("smartlife.m.user.info.get", {})
-        partner = next(
-            (
-                str(item.get("partnerIdentity") or item.get("partnerId"))
-                for item in walk([client.login_result or {}, user_info])
-                if item.get("partnerIdentity") or item.get("partnerId")
-            ),
-            "",
-        )
+        partner, timezone = account_metadata(client, user_info)
         if not partner:
             raise RuntimeError("Tuya login succeeded but returned no partner identity")
-
-        timezone = next(
-            (
-                str(item.get("timezoneId") or item.get("timeZoneId") or item.get("timezone"))
-                for item in walk([client.login_result or {}, user_info])
-                if item.get("timezoneId") or item.get("timeZoneId") or item.get("timezone")
-            ),
-            os.environ.get("TZ", "UTC"),
-        )
 
         homes = await client._call("m.life.home.space.list", {})
         gids = {
