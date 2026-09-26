@@ -3,6 +3,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
-bridge/tuya-camera-bridge
+tuya-camera-bridge-addon/bridge/tuya-camera-bridge
 credentials.json
 *.secret.json
