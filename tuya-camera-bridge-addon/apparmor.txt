@@ -18,6 +18,8 @@ profile tuya-camera-bridge flags=(attach_disconnected,mediate_deleted) {
   /usr/local/bin/tuya-camera-bridge rix,
   /config/tuya_camera_bridge_*.json r,
   /data/** rw,
+  /run/ rw,
+  /run/** rw,
   /tmp/** rw,
   /proc/** r,
   /sys/** r,
