@@ -63,7 +63,7 @@ IDs, encryption codes, local keys or signed request payloads.
 ```bash
 pytest
 ruff check custom_components tests
-docker run --rm -v "$PWD/bridge:/src" -w /src golang:1.26-bookworm \
+docker run --rm -v "$PWD/tuya-camera-bridge-addon/bridge:/src" -w /src golang:1.26-bookworm \
   bash -c 'gofmt -w . && go test ./... && CGO_ENABLED=0 go build -o tuya-camera-bridge .'
 ```
 

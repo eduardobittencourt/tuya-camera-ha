@@ -31,7 +31,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-      - working-directory: bridge
+          cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
+      - working-directory: tuya-camera-bridge-addon/bridge
         run: |
           test -z "$(gofmt -l .)"
           go test ./...
@@ -45,4 +46,4 @@ jobs:
           docker build
           --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
           -f tuya-camera-bridge-addon/Dockerfile
-          .
+          tuya-camera-bridge-addon

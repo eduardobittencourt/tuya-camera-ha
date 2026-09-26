@@ -3,7 +3,7 @@
 This repository ships two coupled components:
 
 - `custom_components/tuya_camera_bridge`: Home Assistant config flow and camera entity.
-- `bridge` + `tuya-camera-bridge-addon`: Tuya WebRTC/MQTT media bridge and HA add-on.
+- `tuya-camera-bridge-addon/bridge`: Tuya WebRTC/MQTT media bridge bundled in the HA add-on.
 
 User-facing setup must remain UI driven. Do not require users to copy device IDs,
 sessions, keys or YAML between the integration and add-on. Any bridge contract

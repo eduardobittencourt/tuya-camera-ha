@@ -12,7 +12,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /tuya-camera-bridge /usr/local/bin/tuya-camera-bridge
-COPY tuya-camera-bridge-addon/run.sh /run.sh
+COPY run.sh /run.sh
 RUN chmod 0755 /run.sh
 
 CMD ["/run.sh"]
