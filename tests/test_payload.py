@@ -56,9 +56,9 @@ def test_bridge_config_carries_the_selected_mobile_app_profile():
         }
     )
     assert config["package_name"] == "com.tuya.smart"
-    assert config["app_version"] == "7.8.6"
-    assert config["sdk_version"] == "5.24.0"
-    assert config["ttid"] == "international"
+    assert len(config["app_key"]) == 20
+    assert "app_version" not in config
+    assert "ttid" not in config
     assert config["cameras"] == [
         {
             "camera_id": "camera",
