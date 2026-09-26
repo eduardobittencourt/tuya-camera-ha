@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install aiohttp cryptography pytest ruff
+      - run: ruff check custom_components tests
+      - run: pytest
+
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - working-directory: bridge
+        run: |
+          test -z "$(gofmt -l .)"
+          go test ./...
+          CGO_ENABLED=0 go build -o tuya-camera-bridge .
+
+  addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          docker build
+          --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
+          -f tuya-camera-bridge-addon/Dockerfile
+          .

@@ -1,0 +1,7 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+bridge/tuya-camera-bridge
+credentials.json
+*.secret.json

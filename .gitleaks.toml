@@ -1,0 +1,8 @@
+title = "Tuya Camera Bridge secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Versioned public Android application identity bundled by tuya-mobile"
+paths = ['''custom_components/tuya_camera_bridge/vendor/tuya_mobile/profiles\.py''']

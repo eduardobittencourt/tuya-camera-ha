@@ -1,0 +1,12 @@
+{
+  "domain": "tuya_camera_bridge",
+  "name": "Tuya Camera Bridge",
+  "codeowners": ["@eduardobittencourt"],
+  "config_flow": true,
+  "dependencies": ["ffmpeg", "stream"],
+  "documentation": "https://github.com/eduardobittencourt/tuya-camera-ha",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/eduardobittencourt/tuya-camera-ha/issues",
+  "version": "0.1.0"
+}

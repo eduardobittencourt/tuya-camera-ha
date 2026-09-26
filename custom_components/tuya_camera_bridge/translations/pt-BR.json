@@ -1,0 +1,48 @@
+{
+  "title": "Tuya Camera Bridge",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conecte sua conta Tuya",
+        "description": "Use a mesma conta, aplicativo e código telefônico do país usados no app. A senha serve apenas para o login e não é armazenada.",
+        "data": {
+          "username": "E-mail ou telefone",
+          "password": "Senha",
+          "country_code": "Código telefônico do país",
+          "application": "Aplicativo"
+        }
+      },
+      "camera": {
+        "title": "Selecione uma câmera",
+        "description": "Apenas câmeras Tuya que usam o protocolo WebRTC móvel são compatíveis.",
+        "data": {"camera_id": "Câmera"}
+      },
+      "reauth_confirm": {
+        "title": "Reconecte sua conta Tuya",
+        "description": "A sessão Tuya atual expirou. Informe a senha para emitir uma nova sessão; a senha não será armazenada.",
+        "data": {
+          "username": "E-mail ou telefone",
+          "password": "Senha",
+          "country_code": "Código telefônico do país",
+          "application": "Aplicativo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Usuário ou senha inválidos",
+      "account_locked": "A conta Tuya está temporariamente bloqueada",
+      "captcha_required": "A Tuya exige captcha; conclua-o primeiro no aplicativo",
+      "mfa_required": "A Tuya exige uma etapa adicional de verificação",
+      "profile_expired": "O perfil do aplicativo móvel não é mais aceito",
+      "cannot_connect": "Não foi possível conectar à Tuya",
+      "incomplete_session": "A Tuya retornou uma sessão incompleta",
+      "no_devices": "Nenhum dispositivo foi encontrado nesta conta",
+      "unknown": "Erro inesperado"
+    },
+    "abort": {
+      "already_configured": "Esta conta já está configurada",
+      "wrong_account": "As credenciais pertencem a outra conta Tuya",
+      "reauth_successful": "A conta Tuya foi reconectada"
+    }
+  }
+}

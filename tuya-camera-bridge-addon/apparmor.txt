@@ -1,0 +1,24 @@
+#include <tunables/global>
+
+profile tuya-camera-bridge flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  /usr/local/bin/tuya-camera-bridge ix,
+  /bin/bash ix,
+  /bin/sleep ix,
+  /usr/bin/md5sum ix,
+  /bin/ls ix,
+  /usr/bin/head ix,
+  /usr/bin/cut ix,
+  /config/tuya_camera_bridge_*.json r,
+  /data/** rw,
+  /tmp/** rw,
+  /proc/** r,
+  /sys/** r,
+}

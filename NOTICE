@@ -1,0 +1,7 @@
+This project includes code derived from aventproxy by thekoma and the Avent
+WebRTC bridge by seydx, both under the MIT License. Their copyright notices are
+preserved in LICENSE and bridge/LICENSE.
+
+The vendored tuya-mobile package is Copyright its contributors and distributed
+under the MIT License. Its license is stored at
+custom_components/tuya_camera_bridge/vendor/TUYA_MOBILE_LICENSE.

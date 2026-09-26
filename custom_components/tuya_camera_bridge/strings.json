@@ -1,0 +1,48 @@
+{
+  "title": "Tuya Camera Bridge",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your Tuya account",
+        "description": "Use the same account, application and country calling code as the mobile app. The password is used for login and is not stored.",
+        "data": {
+          "username": "Email or telephone",
+          "password": "Password",
+          "country_code": "Country calling code",
+          "application": "Application"
+        }
+      },
+      "camera": {
+        "title": "Select a camera",
+        "description": "Only Tuya cameras using the mobile WebRTC protocol are supported.",
+        "data": {"camera_id": "Camera"}
+      },
+      "reauth_confirm": {
+        "title": "Reconnect your Tuya account",
+        "description": "The current Tuya session expired. Enter the account password to issue a new session; the password is not stored.",
+        "data": {
+          "username": "Email or telephone",
+          "password": "Password",
+          "country_code": "Country calling code",
+          "application": "Application"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password",
+      "account_locked": "The Tuya account is temporarily locked",
+      "captcha_required": "Tuya requires a captcha; complete it in the mobile app first",
+      "mfa_required": "Tuya requires an additional verification step",
+      "profile_expired": "The bundled mobile application profile is no longer accepted",
+      "cannot_connect": "Unable to connect to Tuya",
+      "incomplete_session": "Tuya returned an incomplete session",
+      "no_devices": "No devices were found in this account",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "wrong_account": "The credentials belong to a different Tuya account",
+      "reauth_successful": "The Tuya account was reconnected"
+    }
+  }
+}

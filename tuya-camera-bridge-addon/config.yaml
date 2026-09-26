@@ -1,0 +1,22 @@
+name: "Tuya Camera Bridge"
+description: "Tuya mobile WebRTC to RTSP bridge for the companion Home Assistant integration"
+version: "0.1.0"
+slug: "tuya_camera_bridge"
+url: "https://github.com/eduardobittencourt/tuya-camera-ha"
+arch:
+  - amd64
+  - aarch64
+homeassistant: "2025.6.0"
+startup: "application"
+boot: "auto"
+host_network: true
+apparmor: true
+init: false
+options: {}
+schema: {}
+environment:
+  WAIT_FOR_CONFIG: "true"
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /config
