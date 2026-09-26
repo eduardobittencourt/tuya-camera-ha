@@ -74,7 +74,7 @@ func New(cfg Config) (*Gateway, error) {
 		cfg.SourceHost = "127.0.0.1"
 	}
 	if cfg.RTSPPort == 0 {
-		cfg.RTSPPort = 8554
+		cfg.RTSPPort = 38555
 	}
 	if cfg.ONVIFBasePort == 0 {
 		cfg.ONVIFBasePort = 8081

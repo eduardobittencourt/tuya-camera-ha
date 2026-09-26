@@ -25,7 +25,7 @@ background.
 The setup UI accepts traffic only from Home Assistant's authenticated Ingress
 proxy and is visible only to administrators. ONVIF and RTSP remain available on
 the local network so Home Assistant can discover and play the cameras. Do not
-forward ports 8081+, 8554 or 38554 to the internet.
+forward ports 8081+, 38554 or 38555 to the internet.
 
 This is an experimental add-on based on Tuya's private mobile APIs. MFA and
 interactive captcha are not yet supported, and changes to the Tuya apps can

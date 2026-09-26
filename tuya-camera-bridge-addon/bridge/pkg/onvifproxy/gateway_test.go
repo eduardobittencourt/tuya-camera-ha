@@ -16,6 +16,18 @@ func TestNewRejectsIncompleteCamera(t *testing.T) {
 	}
 }
 
+func TestNewAvoidsTheCommonGo2RTCPortByDefault(t *testing.T) {
+	gateway, err := New(Config{Cameras: []Camera{{
+		ID: "id", Name: "Kitchen", SourcePath: "/Kitchen", ProxyPath: "tuya_id",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gateway.cfg.RTSPPort != 38555 {
+		t.Errorf("RTSP port = %d, want 38555", gateway.cfg.RTSPPort)
+	}
+}
+
 func TestWriteMediaMTXConfig(t *testing.T) {
 	dir := t.TempDir()
 	gateway, err := New(Config{

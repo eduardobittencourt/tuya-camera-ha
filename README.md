@@ -62,7 +62,7 @@ directory with mode `0600`; the add-on no longer maps Home Assistant's `/config`
 The Ingress UI is protected by Home Assistant authentication and sends no-cache
 and restrictive browser security headers. ONVIF/RTSP are currently unauthenticated
 on the local network so Home Assistant can adopt discovered cameras without a
-second credential step. Do not expose ports 8081+, 8554 or 38554 to the
+second credential step. Do not expose ports 8081+, 38554 or 38555 to the
 internet.
 
 ## Development

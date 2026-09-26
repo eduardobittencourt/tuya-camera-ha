@@ -169,7 +169,7 @@ Example:
 	cmd.Flags().String("config", "", "Path to the bridge config JSON written by the HA integration")
 	cmd.Flags().Bool("onvif", false, "Expose each camera as an ONVIF H.264 device")
 	cmd.Flags().Int("onvif-port", 8081, "First ONVIF HTTP port (one consecutive port per camera)")
-	cmd.Flags().Int("onvif-rtsp-port", 8554, "RTSP port for ONVIF H.264 streams")
+	cmd.Flags().Int("onvif-rtsp-port", 38555, "RTSP port for ONVIF H.264 streams")
 	cmd.Flags().String("onvif-username", "admin", "ONVIF username")
 	cmd.Flags().String("onvif-password", "", "ONVIF password")
 	cmd.Flags().String("data-dir", "/data", "Persistent add-on data directory")
