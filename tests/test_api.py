@@ -16,29 +16,30 @@ class FakeClient:
     async def _call(self, action, payload, version=None):
         if action == "m.life.home.space.list":
             return {"result": [{"gid": 123}]}
-        assert action == "m.life.my.group.device.list"
-        assert payload == {"gid": "123"}
-        assert version == "2.2"
-        return {
-            "result": [
-                {
-                    "category": "sp",
-                    "deviceId": "camera-1",
-                    "deviceName": "Kitchen",
-                    "productId": "camera-product",
-                },
-                {
-                    "category": "dghsxj",
-                    "devId": "camera-2",
-                    "name": "Doorbell",
-                },
-                {
-                    "category": "dj",
-                    "deviceId": "light-1",
-                    "deviceName": "Hall light",
-                },
-            ]
-        }
+        if action == "m.life.my.group.device.list":
+            assert payload == {"gid": "123"}
+            assert version == "2.2"
+            return {
+                "result": [
+                    {
+                        "deviceId": "camera-1",
+                        "deviceName": "Kitchen",
+                        "productId": "camera-product",
+                    },
+                    {
+                        "devId": "camera-2",
+                        "name": "Doorbell",
+                    },
+                    {
+                        "deviceId": "light-1",
+                        "deviceName": "Hall light",
+                    },
+                ]
+            }
+        assert action == "smartlife.m.rtc.config.get"
+        if payload["devId"].startswith("camera-"):
+            return {"success": True, "result": {"skill": "video"}}
+        return {"success": False, "errorCode": "NOT_SUPPORTED"}
 
 
 def test_discovery_returns_only_camera_categories():

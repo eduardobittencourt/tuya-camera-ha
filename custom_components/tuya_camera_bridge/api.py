@@ -107,11 +107,14 @@ class TuyaCameraApi:
             )
             for item in _walk(response):
                 category = str(item.get("category") or item.get("categoryCode") or "")
-                if category not in CAMERA_CATEGORIES:
-                    continue
                 device_id = item.get("devId") or item.get("deviceId")
                 name = item.get("name") or item.get("deviceName")
                 if not device_id or not name:
+                    continue
+                if category:
+                    if category not in CAMERA_CATEGORIES:
+                        continue
+                elif not await self._async_supports_webrtc(client, str(device_id)):
                     continue
                 devices[str(device_id)] = CameraInfo(
                     device_id=str(device_id),
@@ -119,6 +122,20 @@ class TuyaCameraApi:
                     product_id=str(item.get("productId") or item.get("productKey") or ""),
                 )
         return sorted(devices.values(), key=lambda item: item.name.casefold())
+
+    async def _async_supports_webrtc(self, client, device_id: str) -> bool:
+        """Probe RTC capability when the device-list response omits category."""
+        try:
+            response = await client._call(
+                "smartlife.m.rtc.config.get", {"devId": device_id}
+            )
+        except RuntimeError:
+            return False
+        if not isinstance(response, dict):
+            return False
+        if response.get("success") is True and isinstance(response.get("result"), dict):
+            return True
+        return "p2pConfig" in response or "skill" in response
 
 
 def bridge_app_material(application: str) -> dict[str, str]:
