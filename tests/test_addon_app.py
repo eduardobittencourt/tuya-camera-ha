@@ -27,6 +27,24 @@ def test_walk_yields_nested_mappings() -> None:
     assert {item.get("camera") for item in values} == {None, "one", "two"}
 
 
+def test_compatible_cameras_rejects_devices_without_camera_category() -> None:
+    response = {
+        "result": [
+            {"devId": "camera", "name": "Kitchen", "category": "sp"},
+            {"devId": "light", "name": "Hall light", "category": "dj"},
+            {"devId": "nested", "name": "Metadata without category"},
+        ]
+    }
+
+    assert addon_app.compatible_cameras(response) == {
+        "camera": {
+            "camera_id": "camera",
+            "camera_name": "Kitchen",
+            "product_id": "",
+        }
+    }
+
+
 def test_account_metadata_supports_released_client_without_login_result() -> None:
     client = object()
     user_info = {

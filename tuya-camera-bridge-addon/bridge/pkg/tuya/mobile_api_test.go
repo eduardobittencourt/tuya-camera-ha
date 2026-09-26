@@ -1,9 +1,15 @@
 package tuya
 
 import (
+	"crypto/hmac"
+	"crypto/md5"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -22,7 +28,10 @@ func TestApplyAppProfile(t *testing.T) {
 		ET:                "3",
 	})
 
-	params := client.buildParams("test.action", "1.0", nil)
+	params, _, err := client.buildParams("test.action", "1.0", nil)
+	if err != nil {
+		t.Fatalf("buildParams: %v", err)
+	}
 	if params["appVersion"] != "7.8.6" || params["sdkVersion"] != "5.24.0" {
 		t.Fatalf("app profile was not applied: %#v", params)
 	}
@@ -121,9 +130,96 @@ func TestNewMobileSDKClientDefaultsToEU(t *testing.T) {
 func TestBuildParamsUsesConfiguredTimezone(t *testing.T) {
 	c := NewMobileSDKClient("sk", "sid", "ak", "dev", "ch")
 	c.Timezone = "America/Sao_Paulo"
-	if got := c.buildParams("test.action", "1.0", nil)["timeZoneId"]; got != "America/Sao_Paulo" {
+	params, _, err := c.buildParams("test.action", "1.0", nil)
+	if err != nil {
+		t.Fatalf("buildParams: %v", err)
+	}
+	if got := params["timeZoneId"]; got != "America/Sao_Paulo" {
 		t.Errorf("timeZoneId = %q", got)
 	}
+}
+
+func TestEncryptedMobileCallMatchesPythonClientProtocol(t *testing.T) {
+	c := NewMobileSDKClient("global-material", "sid", "app", "device", "channel")
+	c.ET = "3"
+	c.Ecode = "encryption-code"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("ParseForm: %v", err)
+		}
+		requestID := r.PostForm.Get("requestId")
+		key := c.payloadKey(requestID)
+		payload, err := decryptMobilePayload(key, r.PostForm.Get("postData"))
+		if err != nil {
+			t.Errorf("decrypt request: %v", err)
+		}
+		if string(payload) != `{}` {
+			t.Errorf("payload = %s, want {}", payload)
+		}
+
+		canonical := make(url.Values)
+		for name, values := range r.PostForm {
+			if name != "sign" {
+				canonical[name] = values
+			}
+		}
+		params := make(map[string]string, len(canonical))
+		for name := range canonical {
+			params[name] = canonical.Get(name)
+		}
+		gotSign := r.PostForm.Get("sign")
+		digest := sha256.Sum256([]byte(c.SigningKey))
+		mac := hmac.New(sha256.New, digest[:])
+		mac.Write([]byte(canonicalSignString(params)))
+		wantSign := hex.EncodeToString(mac.Sum(nil))
+		if gotSign != wantSign {
+			t.Errorf("sign = %q, want %q", gotSign, wantSign)
+		}
+
+		encrypted, err := encryptMobilePayload(key, map[string]interface{}{"time": 123})
+		if err != nil {
+			t.Errorf("encrypt response: %v", err)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"result": encrypted})
+	}))
+	defer srv.Close()
+	c.BaseURL = srv.URL
+
+	raw, err := c.Call("smartlife.p.time.get", "1.0", nil)
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if string(raw) != `{"time":123}` {
+		t.Errorf("result = %s", raw)
+	}
+}
+
+func canonicalSignString(params map[string]string) string {
+	filtered := make(map[string]string)
+	for _, key := range signKeyWhitelist {
+		if value := params[key]; value != "" {
+			filtered[key] = value
+		}
+	}
+	if value := filtered["postData"]; value != "" {
+		filtered["postData"] = swapSignString(md5Hex(value))
+	}
+	keys := make([]string, 0, len(filtered))
+	for key := range filtered {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, key+"="+filtered[key])
+	}
+	return strings.Join(parts, "||")
+}
+
+func md5Hex(value string) string {
+	digest := md5.Sum([]byte(value))
+	return hex.EncodeToString(digest[:])
 }
 
 // captureRequest points a client at a test server and returns the form values

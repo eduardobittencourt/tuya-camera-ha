@@ -261,7 +261,7 @@ func runAddon(cmd *cobra.Command, args []string) error {
 				DeviceID: camera.ID, DeviceName: camera.Name, Category: "sp", ProductID: camera.ProductID,
 				RTSPPath: camera.Path, UserKey: userKey, Skill: skill,
 			})
-			core.Logger.Info().Msgf("Camera registered: id=%s name=%s path=%s", camera.ID, camera.Name, camera.Path)
+			core.Logger.Info().Msgf("Camera registered: name=%s path=%s", camera.Name, camera.Path)
 		}
 		if err := storageManager.UpdateCamerasForUser(userKey, infos); err != nil {
 			core.Logger.Warn().Msgf("Could not save cameras: %v", err)

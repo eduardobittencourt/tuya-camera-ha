@@ -97,6 +97,24 @@ def account_metadata(client: Any, user_info: Any) -> tuple[str, str]:
     return partner, timezone
 
 
+def compatible_cameras(response: Any) -> dict[str, dict[str, str]]:
+    cameras: dict[str, dict[str, str]] = {}
+    for item in walk(response):
+        category = str(item.get("category") or item.get("categoryCode") or "")
+        if category not in CAMERA_CATEGORIES:
+            continue
+        device_id = item.get("devId") or item.get("deviceId")
+        name = item.get("name") or item.get("deviceName")
+        if not device_id or not name:
+            continue
+        cameras[str(device_id)] = {
+            "camera_id": str(device_id),
+            "camera_name": str(name),
+            "product_id": str(item.get("productId") or item.get("productKey") or ""),
+        }
+    return cameras
+
+
 async def login_and_build_config(
     username: str, password: str, country_code: str, application: str
 ) -> dict[str, Any]:
@@ -128,17 +146,7 @@ async def login_and_build_config(
             response = await client._call(
                 "m.life.my.group.device.list", {"gid": gid}, version="2.2"
             )
-            for item in walk(response):
-                category = str(item.get("category") or item.get("categoryCode") or "")
-                device_id = item.get("devId") or item.get("deviceId")
-                name = item.get("name") or item.get("deviceName")
-                if not device_id or not name or (category and category not in CAMERA_CATEGORIES):
-                    continue
-                cameras[str(device_id)] = {
-                    "camera_id": str(device_id),
-                    "camera_name": str(name),
-                    "product_id": str(item.get("productId") or item.get("productKey") or ""),
-                }
+            cameras.update(compatible_cameras(response))
         if not cameras:
             raise RuntimeError("No compatible Tuya cameras were found in this account")
 

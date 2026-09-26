@@ -1,9 +1,15 @@
 package tuya
 
 import (
+	"bytes"
+	"compress/gzip"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -174,17 +180,92 @@ func (c *MobileSDKClient) sign(params map[string]string) string {
 	}
 	signStr := strings.Join(parts, "||")
 
-	mac := hmac.New(sha256.New, []byte(c.SigningKey))
+	key := []byte(c.SigningKey)
+	if c.ET == "3" {
+		digest := sha256.Sum256(key)
+		key = digest[:]
+	}
+	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(signStr))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-func (c *MobileSDKClient) buildParams(action, version string, postData interface{}) map[string]string {
-	t := fmt.Sprintf("%d", time.Now().Unix())
+func (c *MobileSDKClient) payloadKey(requestID string) []byte {
+	material := c.SigningKey
+	if c.Ecode != "" {
+		material += "_" + c.Ecode
+	}
+	mac := hmac.New(sha256.New, []byte(requestID))
+	mac.Write([]byte(material))
+	digest := hex.EncodeToString(mac.Sum(nil))
+	return []byte(digest[:16])
+}
+
+func encryptMobilePayload(key []byte, value interface{}) (string, error) {
+	plain, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	sealed := gcm.Seal(nil, nonce, plain, nil)
+	return base64.StdEncoding.EncodeToString(append(nonce, sealed...)), nil
+}
+
+func decryptMobilePayload(key []byte, value string) (json.RawMessage, error) {
+	raw, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return nil, fmt.Errorf("decode encrypted response: %w", err)
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) < gcm.NonceSize() {
+		return nil, fmt.Errorf("encrypted response is shorter than the nonce")
+	}
+	plain, err := gcm.Open(nil, raw[:gcm.NonceSize()], raw[gcm.NonceSize():], nil)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt response: %w", err)
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(plain))
+	if err == nil {
+		decompressed, readErr := io.ReadAll(reader)
+		closeErr := reader.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("decompress response: %w", readErr)
+		}
+		if closeErr != nil {
+			return nil, fmt.Errorf("close gzip response: %w", closeErr)
+		}
+		plain = decompressed
+	}
+	if !json.Valid(plain) {
+		return nil, fmt.Errorf("decrypted response is not valid JSON")
+	}
+	return json.RawMessage(plain), nil
+}
+
+func (c *MobileSDKClient) buildParams(action, version string, postData interface{}) (map[string]string, []byte, error) {
+	requestID := uuid.New().String()
 	params := map[string]string{
 		"a":                 action,
 		"v":                 version,
-		"time":              t,
+		"time":              fmt.Sprintf("%d", time.Now().Unix()),
 		"appVersion":        c.AppVersion,
 		"appRnVersion":      c.AppRNVersion,
 		"channel":           c.Channel,
@@ -195,18 +276,29 @@ func (c *MobileSDKClient) buildParams(action, version string, postData interface
 		"deviceId":          c.DeviceID,
 		"et":                c.ET,
 		"nd":                "1",
-		"lang":              "en_US",
+		"lang":              "en",
 		"os":                "Android",
 		"osSystem":          c.OSSystem,
 		"platform":          c.Platform,
-		"requestId":         uuid.New().String(),
+		"requestId":         requestID,
 		"sdkVersion":        c.SDKVersion,
 		"sid":               c.SID,
 		"timeZoneId":        c.Timezone,
 		"ttid":              c.TTID,
 	}
 
-	if postData != nil {
+	var key []byte
+	if c.ET == "3" {
+		key = c.payloadKey(requestID)
+		if postData == nil {
+			postData = map[string]interface{}{}
+		}
+		encrypted, err := encryptMobilePayload(key, postData)
+		if err != nil {
+			return nil, nil, fmt.Errorf("encrypt request: %w", err)
+		}
+		params["postData"] = encrypted
+	} else if postData != nil {
 		var pdStr string
 		switch v := postData.(type) {
 		case string:
@@ -219,11 +311,14 @@ func (c *MobileSDKClient) buildParams(action, version string, postData interface
 	}
 
 	params["sign"] = c.sign(params)
-	return params
+	return params, key, nil
 }
 
 func (c *MobileSDKClient) Call(action, version string, postData interface{}) (json.RawMessage, error) {
-	params := c.buildParams(action, version, postData)
+	params, payloadKey, err := c.buildParams(action, version, postData)
+	if err != nil {
+		return nil, err
+	}
 
 	form := url.Values{}
 	for k, v := range params {
@@ -249,7 +344,45 @@ func (c *MobileSDKClient) Call(action, version string, postData interface{}) (js
 		return nil, err
 	}
 
+	if c.ET == "3" {
+		return parseEncryptedAPIResponse(body, payloadKey)
+	}
 	return parseAPIResponse(body)
+}
+
+func parseEncryptedAPIResponse(body, key []byte) (json.RawMessage, error) {
+	var envelope struct {
+		Result    json.RawMessage `json:"result"`
+		ErrorCode string          `json:"errorCode,omitempty"`
+		ErrorMsg  string          `json:"errorMsg,omitempty"`
+		Code      string          `json:"code,omitempty"`
+		Msg       string          `json:"msg,omitempty"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, fmt.Errorf("JSON decode error: %w", err)
+	}
+	if len(envelope.Result) == 0 || bytes.Equal(envelope.Result, []byte("null")) {
+		code := envelope.ErrorCode
+		if code == "" {
+			code = envelope.Code
+		}
+		message := envelope.ErrorMsg
+		if message == "" {
+			message = envelope.Msg
+		}
+		if code == "" {
+			code = "unknown"
+		}
+		if message == "" {
+			message = "no result"
+		}
+		return nil, fmt.Errorf("API error: %s (code: %s)", message, code)
+	}
+	var encrypted string
+	if err := json.Unmarshal(envelope.Result, &encrypted); err != nil {
+		return nil, fmt.Errorf("encrypted API result is not a string: %w", err)
+	}
+	return decryptMobilePayload(key, encrypted)
 }
 
 // parseAPIResponse decodes a Tuya api.json response, surfacing the machine-readable
