@@ -95,6 +95,7 @@ func TestWriteMediaMTXConfig(t *testing.T) {
 	for _, want := range []string{
 		"rtspAddress: :48554", "rtspTransports: [tcp]", "tuya_abc:",
 		"rtsp://127.0.0.1:38554/C%C3%A2mera_Cozinha", "libx264", "runOnDemandRestart: true",
+		"runOnDemandCloseAfter: 5m0s",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("config does not contain %q:\n%s", want, text)

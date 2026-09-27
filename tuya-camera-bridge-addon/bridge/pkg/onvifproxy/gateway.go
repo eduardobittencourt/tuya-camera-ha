@@ -28,6 +28,7 @@ const (
 	defaultHeight    = 720
 	defaultFramerate = 15
 	defaultBitrate   = 1200
+	relayIdleTimeout = 5 * time.Minute
 )
 
 // Camera describes one Tuya RTSP source and its stable public proxy path.
@@ -304,7 +305,13 @@ func (g *Gateway) writeMediaMTXConfig() (string, error) {
 			"-tune", "zerolatency", "-pix_fmt", "yuv420p", "-g", "30", "-b:v", "1200k",
 			"-rtsp_transport", "tcp", "-f", "rtsp", publishURL,
 		}, " ")
-		fmt.Fprintf(&b, "  %s:\n    runOnDemand: %s\n    runOnDemandRestart: true\n    runOnDemandStartTimeout: 30s\n    runOnDemandCloseAfter: 15s\n", camera.ProxyPath, strconv.Quote(command))
+		fmt.Fprintf(
+			&b,
+			"  %s:\n    runOnDemand: %s\n    runOnDemandRestart: true\n    runOnDemandStartTimeout: 30s\n    runOnDemandCloseAfter: %s\n",
+			camera.ProxyPath,
+			strconv.Quote(command),
+			relayIdleTimeout,
+		)
 	}
 	path := filepath.Join(g.cfg.DataDir, "mediamtx.yml")
 	if err := os.WriteFile(path, []byte(b.String()), 0o600); err != nil {
