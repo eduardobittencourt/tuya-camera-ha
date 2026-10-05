@@ -5,3 +5,10 @@ preserved in LICENSE and bridge/LICENSE.
 The vendored tuya-mobile package is Copyright its contributors and distributed
 under the MIT License. Its license is stored at
 custom_components/tuya_camera_bridge/vendor/TUYA_MOBILE_LICENSE.
+
+Tuya brand images in custom_components/tuya_camera_bridge/brand are copied
+from home-assistant/brands/core_integrations/tuya for product identification.
+Tuya names and logos belong to their respective owners and are not covered
+by this project's MIT software license. This independent community project
+is not affiliated with or endorsed by Tuya or Home Assistant. See
+custom_components/tuya_camera_bridge/BRAND_ASSETS.md for provenance.

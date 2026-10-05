@@ -1,8 +1,11 @@
 # Beta validation
 
 Validation on 2026-10-05 used Home Assistant OS with Core 2026.9.4 on Linux
-amd64 and one real Tuya Smart camera advertising HEVC 1920×1080 and signed
-16-bit PCM at 8 kHz mono. Session material remained inside Home Assistant;
+amd64 and one Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736),
+firmware 1.1.48, signed in through Tuya Smart. The owner identified the retail
+model from the [manufacturer listing](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
+The camera advertised HEVC 1920×1080 and signed 16-bit PCM at 8 kHz mono.
+Session material remained inside Home Assistant;
 no credentials, camera IDs, media URLs, recordings or images are included here.
 
 ## Findings and fixes
@@ -38,6 +41,8 @@ negotiated-track path. HEVC video now triggers the activity heartbeat.
 - Native HA WebSocket WebRTC negotiation, followed by actual H.264 and Opus RTP
   reception in the HA network namespace. This used the installed HA go2rtc
   provider, not only a separate synthetic signaling server.
+- The owner confirmed image and audible sound on the phone after enabling the
+  player's sound. This adds an end-user playback check to protocol-level tests.
 - Bridge/relay memory during one HLS viewer stayed near 120 MiB. CPU samples
   ranged from approximately 65–74% of one core for software HEVC decoding and
   H.264 720p/15 fps encoding, including the bridge. These measurements exclude
@@ -52,14 +57,16 @@ negotiated-track path. HEVC video now triggers the activity heartbeat.
 
 ## Limits
 
-The native WebRTC receiver ran in the HA network namespace. Playback in the
-user's mobile browser/app and its particular remote network path require a
-separate user check. This does not validate every Tuya camera or firmware.
+The native WebRTC receiver ran in the HA network namespace. Phone playback was
+confirmed by the owner; the browser/app version and local/remote network path
+were not recorded. This does not validate every Tuya camera or firmware.
 
 A short live-media test does not establish 24-hour reliability, recovery after
 camera power loss or a real WAN interruption. Synthetic source loss and managed
 bridge failure cover separate failure paths. Tuya authentication/signaling still
 require internet access; local-only/offline operation has not been established.
+Battery endurance, the camera's power state during testing and long idle/wake
+cycles were not measured. See [compatibility](compatibility.md).
 
 The installed beta is from the development branch. The GitHub release remains
 a draft; a general first installation through HACS requires published assets.

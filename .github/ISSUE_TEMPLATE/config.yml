@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions / Dúvidas
+    url: https://github.com/eduardobittencourt/tuya-camera-ha/discussions
+    about: Setup help and general discussion in English or Portuguese.
+  - name: Report a security vulnerability privately
+    url: https://github.com/eduardobittencourt/tuya-camera-ha/security/advisories/new
+    about: Never post credentials or vulnerabilities in a public issue.

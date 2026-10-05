@@ -29,6 +29,7 @@ jobs:
           python-version: "3.14"
       - run: pip install '.[test]'
       - run: ruff check custom_components tuya-camera-bridge-addon/app tests scripts
+      - run: python scripts/check_repository.py
       - run: pytest -m 'not media'
 
   go:
@@ -44,6 +45,7 @@ jobs:
           test -z "$(gofmt -l .)"
           go test -race ./...
       - run: python3 scripts/package_release.py --verify
+      - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
       - uses: actions/upload-artifact@v4
         with:
           name: managed-integration

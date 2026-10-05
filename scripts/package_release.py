@@ -40,13 +40,17 @@ def main() -> None:
     else:
         manifest_path.write_text(json.dumps(info, indent=2) + "\n")
     with zipfile.ZipFile(args.output / "tuya_camera_bridge.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-        for path in sorted(COMPONENT.rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
-                relative = path.relative_to(COMPONENT).as_posix()
-                zip_info = zipfile.ZipInfo(relative, date_time=(2026, 1, 1, 0, 0, 0))
-                zip_info.compress_type = zipfile.ZIP_DEFLATED
-                zip_info.external_attr = 0o644 << 16
-                archive.writestr(zip_info, path.read_bytes())
+        files = {
+            path.relative_to(COMPONENT).as_posix(): path
+            for path in COMPONENT.rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+        }
+        files.update({name: ROOT / name for name in ("LICENSE", "NOTICE")})
+        for relative, path in sorted(files.items()):
+            zip_info = zipfile.ZipInfo(relative, date_time=(2026, 1, 1, 0, 0, 0))
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+            zip_info.external_attr = 0o644 << 16
+            archive.writestr(zip_info, path.read_bytes())
     (args.output / "SHA256SUMS").write_text("".join(f"{digest}  {name}\n" for name, digest in hashes.items()))
     print(f"Prepared v{version}: amd64, arm64, checksum manifest and HACS zip")
 

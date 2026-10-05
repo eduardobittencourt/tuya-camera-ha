@@ -1,138 +1,112 @@
+<p align="center">
+  <img src="custom_components/tuya_camera_bridge/brand/logo.png" alt="Tuya" width="220">
+</p>
+
 # Tuya Camera Bridge for Home Assistant
 
-A custom integration for Tuya Smart and Smart Life cameras using Tuya's mobile
-WebRTC protocol. Install through HACS, sign in once, and all compatible cameras
-appear as native Home Assistant camera entities. No separate add-on, ONVIF setup,
-manual device IDs or YAML are required by the integration.
+[![CI](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml)
+[![HACS validation](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml)
+[![HACS custom integration](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://www.hacs.dev/docs/faq/custom_repositories/)
+[![Home Assistant 2026.9+](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue.svg)](https://www.home-assistant.io/)
+[![License MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**0.3.0b1 is a beta.** Camera compatibility still depends on the model and
-firmware. Authentication and signaling require Tuya's internet services; this
-is not an offline camera integration. Media may use a direct connection or TURN.
+**Connect compatible Tuya Smart and Smart Life cameras from the Home Assistant
+UI.** Sign in with the account used in the mobile app; the integration discovers
+cameras and manages the media bridge automatically.
 
-## Installation
+[Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
+[Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
 
-Requires Home Assistant **2026.9 or newer**, running on **Linux amd64 or
-AArch64**. Home Assistant OS and Container include FFmpeg. Other Linux setups
-must already have an FFmpeg build with H.264/AAC encoding support.
+## What you get
 
-1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` as an **Integration**
-   custom repository in HACS.
-2. Enable beta releases if installing `0.3.0b1`, download the integration and
-   restart Home Assistant.
-3. In **Settings → Devices & services → Add integration**, choose **Tuya Camera
-   Bridge**.
-4. Select Tuya Smart or Smart Life and enter the same account, password and
-   country calling code as the mobile app (`55` for Brazil).
+- Native camera entities, live video with audio, and fresh JPEG snapshots.
+- HLS streaming and WebRTC through Home Assistant's provider.
+- Account login, camera discovery, reconfiguration and session reauthentication.
+- A bridge installed with checksum verification and restarted after a crash.
+- H.264 passthrough; H.265 converted to H.264 at 720p / 15 fps for playback.
+- Setup through the UI: no separate add-on, ONVIF configuration or manual IDs.
 
-The integration downloads a version-pinned bridge for the host architecture,
-verifies its embedded SHA-256 checksum, and manages it automatically. First
-setup and upgrades need access to GitHub Releases. A verified cached executable
-is reused on subsequent restarts. Use a published release: development branches
-may reference bridge assets that have not been published yet.
+**This is a beta using Tuya's private mobile APIs.** Compatibility depends on
+camera model and firmware. Internet is required for Tuya authentication and
+signaling; media can travel directly or through TURN. This project does not
+promise offline/local-only operation or compatibility with every Tuya camera.
+PTZ, two-way audio, camera settings and interactive MFA/captcha are not supported.
 
-## How it works
+## Install with HACS
 
-```text
-Native Home Assistant integration
-  ├─ Account login, discovery and reauthentication
-  ├─ Session in Home Assistant's config entry; password is never saved
-  ├─ Managed Go bridge (session passed through stdin)
-  │    ├─ Tuya mobile API / MQTT signaling
-  │    ├─ Camera WebRTC / TURN connection
-  │    └─ RTSP on an automatically allocated loopback port
-  └─ FFmpeg relay on a private loopback HTTP endpoint
-       ├─ H.264 copied without video re-encoding
-       ├─ H.265 converted to H.264 at 720p / 15 fps
-       └─ Receive-only audio converted to AAC
-             ↓
-       Native camera entities, snapshots, HLS and HA's WebRTC provider
-```
+Requires **Home Assistant 2026.9+ on Linux amd64 or AArch64**, an existing HACS
+installation, and FFmpeg. Home Assistant OS and Container include FFmpeg;
+other Linux installations must provide a build with H.264/AAC encoding support.
 
-FFmpeg runs on demand, with up to four streaming consumers per camera. Native
-HA streaming normally shares a stream between viewers. Opening the camera in
-multiple independent consumers can create additional FFmpeg processes. Snapshots
-start a short-lived decoder and always request a fresh frame: a failed capture
-does not return an old cached image. Camera wake-up can take several seconds.
+[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-The integration restarts a crashed bridge with bounded backoff, reports received
-video and connection errors, and requests reauthentication when a recognized
-Tuya session-expiry error occurs. Once a connection error is detected, periodic
-camera updates try to recover it. Standby means the bridge is ready but nobody
-has requested media; it does not assert that the camera is reachable.
+1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
+   repositories**, selecting **Integration**.
+2. Select a published release; enable beta versions for `0.3.0b1`. Download it
+   and restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
+4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
+   and country calling code as the app (`55` for Brazil).
+5. Open a discovered camera and enable sound in the player.
 
-Use **Reconfigure** on the integration entry to sign in again and rediscover
-cameras. MFA and interactive captcha are not implemented. A challenge completed
-in the mobile app does not guarantee that the add-on/integration login will be
-accepted. Tuya's private APIs and public app profiles can change.
+Use a **published release**. A draft release is not downloadable by the public,
+and a development checkout may reference unpublished bridge files. First setup
+and upgrades need GitHub access to download the matching executable. The verified
+cache is reused on later starts. See [installation and migration](docs/installation.md).
 
-Two-way audio, PTZ and camera settings are not exposed by this integration.
+This repository can be added manually to HACS; it is not currently listed in the
+HACS default catalog. Passing validation is separate from catalog acceptance.
 
-## Security and removal
+## Tested cameras
 
-RTSP and HTTP listen only on `127.0.0.1`, using ephemeral ports. HTTP stream URLs
-include a random path. Remote viewing goes through Home Assistant authentication;
-the integration does not open camera ports on the LAN. Loopback does not isolate
-processes already running inside the same HA container.
+**Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736), firmware
+1.1.48**, tested using Tuya Smart, has passed live video, audio, snapshots,
+automatic bridge recovery and playback on the owner's phone. The owner identified
+the model from its [manufacturer listing](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
+Battery endurance and long idle/wake cycles have not been measured. This is one
+tested unit, not a guarantee for every firmware or other Tuya camera.
 
-Account sessions are sensitive and are stored by Home Assistant in `.storage`.
-The Go bridge receives its session via stdin, rather than arguments or a
-persistent bridge JSON. Runtime metadata and verified binaries live under
-`.storage/tuya_camera_bridge`. Passwords and raw bridge output are excluded from
-logs and diagnostics. Unloading the entry stops the bridge and media processes;
-removing it also removes its account runtime directory. The shared verified
-binary cache is retained for other accounts.
+See the [compatibility table](docs/compatibility.md) and
+[beta validation report](docs/validation-0.3.0b1.md). Report another model with the
+[compatibility form](https://github.com/eduardobittencourt/tuya-camera-ha/issues/new?template=compatibility_report.yml).
 
-The old HACS integration's version-1 entries migrate automatically, preserving
-camera IDs. Its obsolete root-level bridge JSON is removed. Existing standalone
-add-on/ONVIF installations are not automatically removed: stop the old add-on
-when switching and remove its old ONVIF entities separately to avoid duplicates.
-The add-on source remains available for compatibility.
+## How it runs
 
-## Development and validation
+The Python integration supervises a small Go subprocess that handles Tuya
+signaling and camera WebRTC. A private RTSP endpoint feeds an on-demand FFmpeg
+relay, which provides H.264/AAC to Home Assistant. These processes run inside
+the HA environment and use CPU/RAM, especially when converting H.265 video.
 
-Use Python 3.14 and Go 1.26.8 (the pinned release toolchain):
+For the tested camera, one HLS viewer used about 120 MiB for bridge plus relay,
+with roughly 65–74% of one CPU core. This excludes the rest of HA and is not a
+guarantee for other cameras or multiple viewers.
 
-```bash
-pip install '.[test]'
-ruff check custom_components tuya-camera-bridge-addon/app tests scripts
-pytest -m 'not media'
-cd tuya-camera-bridge-addon/bridge
-go test -race ./...
-cd ../..
-python scripts/package_release.py
-```
+Read [architecture](docs/architecture.md) for process lifecycle and transport
+choices. The standalone add-on remains a [legacy compatibility path](tuya-camera-bridge-addon/DOCS.md).
 
-Real media tests use a synthetic RTSP camera and check H.264, H.265, audio,
-native HA HLS, snapshots and source disconnection:
+## Privacy and support
 
-```bash
-TEST_FFMPEG_BINARY=/usr/bin/ffmpeg \
-TEST_MEDIAMTX_BINARY=/path/to/mediamtx \
-pytest -m media --timeout=90
-```
+The account password is used for login and is not saved. Sessions are sensitive
+and stored in HA's `.storage`; treat backups as private. RTSP and relay HTTP
+listen on loopback, and remote access goes through HA authentication.
 
-For the WebRTC receive test, also set `TEST_GO2RTC_BINARY` to go2rtc 1.9.14 and
-`TEST_WEBRTC_PROBE` to the executable built with
-`go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc` from the bridge
-directory. This checks H.264 video and Opus audio using the same two-source
-arrangement as HA's go2rtc provider. CI runs this extended test for both codecs.
+Use [troubleshooting](docs/troubleshooting.md) and [support](SUPPORT.md) before
+opening an issue. Never publish credentials, tokens, `.storage`, raw bridge
+captures, camera IDs or private images. Report security problems through
+[private vulnerability reporting](SECURITY.md).
 
-MediaMTX is only a development test fixture for the new integration. CI also
-builds the compatibility add-on Docker image. Release packaging produces amd64
-and arm64 executables, their SHA-256 checksums and `tuya_camera_bridge.zip`.
-`package_release.py --verify` fails when source/toolchain changes make a binary
-differ from the committed manifest. After changing Go code, regenerate the
-manifest before releasing. The release workflow creates a **draft** for review.
+## Contributing
 
-The intended HEVC/PCM camera has also been tested on HA OS; see the
-[beta validation report](docs/validation-0.3.0b1.md) for results and limits.
+Compatibility reports, documentation fixes and code contributions are welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [development](docs/development.md),
+[release preparation](docs/releasing.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
-Automated tests do not replace verification with the intended Tuya camera:
-check mobile login, wake-up, live video/audio, source/network interruption,
-restarts and sustained resource usage before relying on a beta.
+## Credits
 
-## Credits and license
+Community project maintained by [Eduardo Bittencourt](https://github.com/eduardobittencourt).
+Software is MIT licensed; original notices for aventproxy/Avent and the vendored
+`tuya-mobile` library are preserved. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-MIT licensed. The media bridge derives from
-[aventproxy](https://github.com/thekoma/aventproxy) and its Avent WebRTC bridge.
-The vendored `tuya-mobile` implementation retains its MIT license. See `NOTICE`.
+Tuya names and images belong to their respective owners. The project is not
+affiliated with or endorsed by Tuya or Home Assistant. [Image provenance](custom_components/tuya_camera_bridge/BRAND_ASSETS.md).

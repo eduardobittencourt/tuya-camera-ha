@@ -32,4 +32,4 @@ build-backend = "setuptools.build_meta"
 include = ["custom_components*"]
 
 [tool.setuptools.package-data]
-"custom_components.tuya_camera_bridge" = ["*.json", "translations/*.json", "vendor/tuya_mobile/LICENSE"]
+"custom_components.tuya_camera_bridge" = ["*.json", "translations/*.json", "vendor/TUYA_MOBILE_LICENSE", "brand/*.png", "BRAND_ASSETS.md"]

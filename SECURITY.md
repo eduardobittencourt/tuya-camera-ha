@@ -1,7 +1,13 @@
 # Security policy
 
-Report credential exposure or authentication vulnerabilities privately through
-GitHub security advisories.
+Report credential exposure or authentication vulnerabilities through
+[GitHub private vulnerability reporting](https://github.com/eduardobittencourt/tuya-camera-ha/security/advisories/new).
+Do not open a public issue with credentials, exploit details or private media.
+Describe the affected version, impact and reproduction using synthetic data.
+
+Security fixes target the latest integration beta (currently 0.3.0b1). Older
+development snapshots and the compatibility add-on have no separate maintenance
+guarantee. This volunteer project does not promise a response deadline.
 
 Passwords are transient login inputs and are never persisted. Home Assistant
 stores the authenticated session in its config entry. Treat Home Assistant

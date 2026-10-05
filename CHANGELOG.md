@@ -23,6 +23,11 @@
 - Advertise Tuya codec 101 as L16 PCM and convert its sample byte order, fixing
   doubled audio duration and invalid HLS timestamps on PCM cameras.
 - Report video activity for HEVC transported over the Tuya data channel.
+- Package local Tuya icons/logos with attribution and license notices.
+- Add HACS/hassfest validation, release/archive checks, installation and migration
+  guides, Brazilian Portuguese documentation and community issue forms.
+- Record live validation on Positivo Smart Câmera Wi-Fi com Bateria (11188736),
+  firmware 1.1.48, including image and sound confirmed on the owner's phone.
 
 This beta requires Home Assistant 2026.9+. Real Tuya model/firmware compatibility
 must be verified separately. Internet access to Tuya remains necessary. PTZ,
