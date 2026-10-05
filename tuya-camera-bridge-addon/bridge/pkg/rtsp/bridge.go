@@ -222,6 +222,7 @@ func (wb *WebRTCBridge) Start() error {
 	// Determine stream settings
 	wb.streamType = tuya.GetStreamType(&skill, wb.resolution)
 	wb.isHEVC = tuya.IsHEVC(&skill, wb.streamType)
+	wb.rtpForwarder.SetAudioPCM16(len(skill.Audios) > 0 && skill.Audios[0].CodecType == 101)
 
 	core.Logger.Info().Msgf("Stream settings - Resolution: %s, Type: %d, HEVC: %v", wb.resolution, wb.streamType, wb.isHEVC)
 
@@ -369,8 +370,9 @@ func (wb *WebRTCBridge) setupPeerConnection(webRTCConfig *tuya.WebRTCConfig) err
 					return
 				}
 
+				videoSSRC, audioSSRC := wb.rtpForwarder.SourceSSRCs()
 				switch packet.SSRC {
-				case wb.rtpForwarder.videoSSRC:
+				case videoSSRC:
 					if !loggedVideoPacket {
 						core.Logger.Debug().Msgf(
 							"First datachannel video RTP packet: payload_type=%d marker=%v payload_bytes=%d",
@@ -380,7 +382,10 @@ func (wb *WebRTCBridge) setupPeerConnection(webRTCConfig *tuya.WebRTCConfig) err
 					}
 					packet.PayloadType = 96
 					wb.rtpForwarder.ForwardVideoPacket(packet)
-				case wb.rtpForwarder.audioSSRC:
+					if wb.OnVideoPacket != nil {
+						wb.OnVideoPacket(packet)
+					}
+				case audioSSRC:
 					if !loggedAudioPacket {
 						core.Logger.Debug().Msgf(
 							"First datachannel audio RTP packet: payload_type=%d marker=%v payload_bytes=%d",
@@ -707,8 +712,7 @@ func (wb *WebRTCBridge) probe(msg pion.DataChannelMessage) (bool, error) {
 			return false, err
 		}
 
-		wb.rtpForwarder.videoSSRC = recvMessage.Video.SSRC
-		wb.rtpForwarder.audioSSRC = recvMessage.Audio.SSRC
+		wb.rtpForwarder.SetSourceSSRCs(recvMessage.Video.SSRC, recvMessage.Audio.SSRC)
 
 		completeMsg, _ := json.Marshal(tuya.DataChannelMessage{
 			Type: "complete",

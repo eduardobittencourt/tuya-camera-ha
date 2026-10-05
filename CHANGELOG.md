@@ -18,6 +18,12 @@
 - Drain subprocess output and abort stalled HTTP consumers during shutdown,
   including when FFmpeg requires a forced termination.
 
+- Preserve RTP sampling clocks through burst delivery and timestamp wraparound;
+  serialize forwarding/lifecycle updates and stop replaying stale RTP packets.
+- Advertise Tuya codec 101 as L16 PCM and convert its sample byte order, fixing
+  doubled audio duration and invalid HLS timestamps on PCM cameras.
+- Report video activity for HEVC transported over the Tuya data channel.
+
 This beta requires Home Assistant 2026.9+. Real Tuya model/firmware compatibility
 must be verified separately. Internet access to Tuya remains necessary. PTZ,
 two-way audio and interactive MFA/captcha are not implemented.
