@@ -376,7 +376,7 @@ func parseEncryptedAPIResponse(body, key []byte) (json.RawMessage, error) {
 		if message == "" {
 			message = "no result"
 		}
-		return nil, fmt.Errorf("API error: %s (code: %s)", message, code)
+		return nil, &APIError{Code: code, Message: message}
 	}
 	var encrypted string
 	if err := json.Unmarshal(envelope.Result, &encrypted); err != nil {
@@ -408,7 +408,7 @@ func unwrapEncryptedResult(raw json.RawMessage) (json.RawMessage, error) {
 		if message == "" {
 			message = "no result"
 		}
-		return nil, fmt.Errorf("API error: %s (code: %s)", message, code)
+		return nil, &APIError{Code: code, Message: message}
 	}
 	if len(envelope.Result) != 0 && !bytes.Equal(envelope.Result, []byte("null")) {
 		return envelope.Result, nil
@@ -430,7 +430,7 @@ func parseAPIResponse(body []byte) (json.RawMessage, error) {
 	}
 	if !result.Success {
 		if result.ErrorCode != "" {
-			return nil, fmt.Errorf("API error: %s (code: %s)", result.ErrorMsg, result.ErrorCode)
+			return nil, &APIError{Code: result.ErrorCode, Message: result.ErrorMsg}
 		}
 		return nil, fmt.Errorf("API error: %s", result.ErrorMsg)
 	}

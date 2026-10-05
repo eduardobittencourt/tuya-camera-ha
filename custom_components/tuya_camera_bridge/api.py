@@ -43,6 +43,7 @@ class LoginResult:
     application: str
     country_code: str
     cameras: tuple[CameraInfo, ...]
+    timezone: str = "UTC"
 
 
 class TuyaCameraApi:
@@ -69,7 +70,7 @@ class TuyaCameraApi:
         )
         mobile_session = await client.login_with_password(password, country_code)
         user_info = await client._call("smartlife.m.user.info.get", {})
-        login_data = client.login_result or {}
+        login_data = getattr(client, "login_result", None) or {}
         partner = next(
             (
                 str(item.get("partnerIdentity") or item.get("partnerId"))
@@ -91,6 +92,7 @@ class TuyaCameraApi:
             application=selected.value,
             country_code=country_code,
             cameras=tuple(cameras),
+            timezone=next((str(item.get("timezoneId") or item.get("timezone")) for item in _walk([login_data, user_info]) if item.get("timezoneId") or item.get("timezone")), "UTC"),
         )
 
     async def _async_discover_devices(self, client) -> list[CameraInfo]:
@@ -158,4 +160,13 @@ def bridge_app_material(application: str) -> dict[str, str]:
         "app_key": profile.app_id,
         "ch_key": signer.channel_key(),
         "package_name": profile.package,
+        "app_version": profile.app_version,
+        "sdk_version": profile.sdk_version,
+        "device_core_version": profile.device_core_version,
+        "ttid": profile.ttid,
+        "channel": profile.channel,
+        "os_system": profile.os_system,
+        "platform": profile.platform,
+        "app_rn_version": profile.app_rn_version,
+        "et": profile.et,
     }

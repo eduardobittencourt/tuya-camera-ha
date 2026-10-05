@@ -1,5 +1,9 @@
 # Tuya Camera Bridge
 
+**Legacy compatibility path.** New installations should use the
+[native HACS integration](../README.md). It manages the bridge automatically
+without this add-on or ONVIF setup. See the [migration guide](../docs/installation.md).
+
 This standalone add-on exposes Tuya Smart and Smart Life cameras to Home
 Assistant through its built-in ONVIF integration. HACS and YAML configuration
 are not required.

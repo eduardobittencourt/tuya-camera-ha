@@ -1,0 +1,58 @@
+name: Camera compatibility / Compatibilidade
+description: Tell us which camera and firmware you tested, including partial failures.
+title: "[Camera]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English or Portuguese is fine. Discovery alone does not establish compatibility.
+        Include only public product information. Never include IDs, serial numbers,
+        account details, tokens, signed stream URLs or private recordings.
+  - type: input
+    id: model
+    attributes:
+      label: Retail brand/model and public product link
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: Say unknown if unavailable.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: HA version, integration version, installation type, architecture and account app
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results by feature
+      description: Mark each as working, failing or not tested. Describe failures separately.
+      value: |
+        Discovery:
+        HLS video:
+        WebRTC video:
+        Receive audio:
+        Fresh snapshots:
+        Mobile playback:
+        Recovery after bridge/source interruption:
+    validations:
+      required: true
+  - type: textarea
+    id: conditions
+    attributes:
+      label: Test duration and conditions
+      description: Include battery/mains power, idle/wake behavior and local/remote viewing, if known. Do not include network addresses.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This report contains only public product details and sanitized test results.
+          required: true

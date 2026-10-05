@@ -1,0 +1,60 @@
+name: Bug report / Relatar problema
+description: Report a reproducible problem without private account or camera data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the troubleshooting guide first. English or Portuguese is fine.
+        Do not include tokens, IDs, serial numbers, signed URLs, raw API responses,
+        backups, credentials or private images. Use private security reporting for vulnerabilities.
+  - type: input
+    id: versions
+    attributes:
+      label: Home Assistant and integration versions
+      placeholder: HA 2026.9.4 / integration 0.3.0b1
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Installation type and architecture
+      placeholder: HA OS / amd64, or Container / aarch64
+    validations:
+      required: true
+  - type: input
+    id: camera
+    attributes:
+      label: Retail camera brand/model and firmware
+      description: A public product link is useful. Say unknown if you cannot identify the model.
+    validations:
+      required: true
+  - type: dropdown
+    id: app
+    attributes:
+      label: Account application
+      options:
+        - Tuya Smart
+        - Smart Life
+        - Other / unknown
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps, expected behavior and actual behavior
+      description: Include whether discovery, HLS, WebRTC, audio and snapshots work separately.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized errors or diagnostics
+      description: Review every field before sharing. Do not paste raw bridge logs or private media.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I reviewed the report and removed credentials, private media and account/device identifiers.
+          required: true

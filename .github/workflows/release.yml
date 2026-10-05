@@ -1,0 +1,35 @@
+name: Release integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
+      - run: python3 scripts/package_release.py --verify
+      - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
+      - name: Prepare a draft release for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("custom_components/tuya_camera_bridge/manifest.json"))["version"])')
+          tag="v${version}"
+          if gh release view "${tag}" --json isDraft > /tmp/tuya-release.json; then
+            python3 -c 'import json; assert json.load(open("/tmp/tuya-release.json"))["isDraft"], "Refusing to overwrite a published release"'
+            gh release edit "${tag}" --draft --prerelease --target "${GITHUB_SHA}" \
+              --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
+            gh release upload "${tag}" dist/* --clobber
+          else
+            gh release create "${tag}" dist/* \
+              --draft --prerelease --target "${GITHUB_SHA}" \
+              --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
+          fi

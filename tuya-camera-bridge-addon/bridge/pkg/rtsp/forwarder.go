@@ -32,17 +32,13 @@ type RTPForwarder struct {
 	firstVideoPacket bool
 	firstAudioPacket bool
 
-	// H264 SPS/PPS cache for parameter set injection
-	spsPacket *rtp.Packet
-	ppsPacket *rtp.Packet
-
-	// Timestamp rebasing
-	videoTimeStart time.Time
-	videoSeqStart  uint16
-	videoTsStarted bool
-	audioTimeStart time.Time
-	audioSeqStart  uint16
-	audioTsStarted bool
+	// Rebase each source clock once, preserving sampling intervals and frame
+	// fragmentation even when Tuya delivers buffered packets in a burst.
+	videoTimestampBase uint32
+	videoTsStarted     bool
+	audioTimestampBase uint32
+	audioTsStarted     bool
+	audioPCM16         bool
 
 	OnBackchannelAudio func(*rtp.Packet)
 }
@@ -249,7 +245,10 @@ func (rf *RTPForwarder) AddTCPClient(sessionID string, conn net.Conn, videoRTPCh
 func (rf *RTPForwarder) RemoveClient(sessionID string) {
 	rf.mutex.Lock()
 	defer rf.mutex.Unlock()
+	rf.removeClientLocked(sessionID)
+}
 
+func (rf *RTPForwarder) removeClientLocked(sessionID string) {
 	if client, exists := rf.clients[sessionID]; exists {
 		if client.transportMode == TransportUDP {
 			if client.videoConn != nil {
@@ -278,85 +277,24 @@ func isDeadClientError(err error) bool {
 		strings.Contains(msg, "use of closed network connection")
 }
 
-func (rf *RTPForwarder) getNALType(packet *rtp.Packet) byte {
-	if len(packet.Payload) == 0 {
-		return 0
-	}
-	nalType := packet.Payload[0] & 0x1F
-	if nalType == 28 && len(packet.Payload) > 1 {
-		// FU-A: real NAL type is in second byte, only on start bit
-		if packet.Payload[1]&0x80 != 0 {
-			return packet.Payload[1] & 0x1F
-		}
-		return 0
-	}
-	return nalType
-}
-
-func (rf *RTPForwarder) cacheSTAP(packet *rtp.Packet) {
-	// STAP-A (type 24): contains multiple NAL units including SPS/PPS
-	payload := packet.Payload[1:] // skip STAP-A header byte
-	for len(payload) > 2 {
-		nalSize := int(payload[0])<<8 | int(payload[1])
-		payload = payload[2:]
-		if nalSize > len(payload) {
-			break
-		}
-		nalType := payload[0] & 0x1F
-		if nalType == 7 || nalType == 8 {
-			rf.cacheNAL(packet, nalType)
-		}
-		payload = payload[nalSize:]
-	}
-}
-
-func (rf *RTPForwarder) cacheNAL(packet *rtp.Packet, nalType byte) {
-	switch nalType {
-	case 7:
-		rf.spsPacket = packet.Clone()
-	case 8:
-		rf.ppsPacket = packet.Clone()
-	}
-}
-
 func (rf *RTPForwarder) ForwardVideoPacket(packet *rtp.Packet) {
-	rf.mutex.RLock()
+	rf.mutex.Lock()
+	defer rf.mutex.Unlock()
 
 	if len(rf.clients) == 0 {
-		rf.mutex.RUnlock()
 		return
 	}
-
-	// Rebase timestamp to wall clock (90kHz for H264)
 	if !rf.videoTsStarted {
-		rf.videoTimeStart = time.Now()
-		rf.videoSeqStart = packet.SequenceNumber
+		rf.videoTimestampBase = packet.Timestamp
 		rf.videoTsStarted = true
 	}
-	elapsed := time.Since(rf.videoTimeStart)
-	packet.Timestamp = uint32(elapsed.Seconds() * 90000)
-	packet.SequenceNumber = rf.videoSeqStart + (packet.SequenceNumber - rf.videoSeqStart)
-
-	nalType := rf.getNALType(packet)
-
-	// Cache SPS (7), PPS (8), and STAP-A (24) which may contain both
-	switch nalType {
-	case 7:
-		rf.spsPacket = packet.Clone()
-	case 8:
-		rf.ppsPacket = packet.Clone()
-	case 24:
-		rf.cacheSTAP(packet)
-	}
-
-	// Before IDR keyframe (5), inject cached SPS/PPS
-	if nalType == 5 && rf.spsPacket != nil && rf.ppsPacket != nil {
-		rf.forwardVideoData(rf.spsPacket)
-		rf.forwardVideoData(rf.ppsPacket)
-	}
-
-	rf.forwardVideoData(packet)
-	rf.mutex.RUnlock()
+	// uint32 subtraction intentionally handles RTP timestamp wraparound.
+	// Copy the header so forwarding never changes the caller's packet.
+	forwarded := *packet
+	forwarded.Timestamp -= rf.videoTimestampBase
+	// Pass parameter sets through in sequence. Replaying cached RTP packets
+	// before IDRs reuses stale sequence numbers/timestamps and corrupts RTP.
+	rf.forwardVideoData(&forwarded)
 }
 
 func (rf *RTPForwarder) forwardVideoData(packet *rtp.Packet) {
@@ -405,29 +343,42 @@ func (rf *RTPForwarder) forwardVideoData(packet *rtp.Packet) {
 	if len(deadClients) > 0 {
 		for _, id := range deadClients {
 			core.Logger.Info().Msgf("Removing dead video client %s", id)
-			delete(rf.clients, id)
+			rf.removeClientLocked(id)
 		}
 	}
 }
 
 func (rf *RTPForwarder) ForwardAudioPacket(packet *rtp.Packet) {
-	rf.mutex.RLock()
-	defer rf.mutex.RUnlock()
+	rf.mutex.Lock()
+	defer rf.mutex.Unlock()
 
 	if len(rf.clients) == 0 {
 		return
 	}
 
-	// Rebase timestamp to wall clock (8kHz for PCMU)
+	// Audio timestamps measure samples, not network arrival time. Keeping
+	// that clock avoids overlapping AAC frames after FFmpeg transcoding.
 	if !rf.audioTsStarted {
-		rf.audioTimeStart = time.Now()
+		rf.audioTimestampBase = packet.Timestamp
 		rf.audioTsStarted = true
 	}
-	elapsed := time.Since(rf.audioTimeStart)
-	packet.Timestamp = uint32(elapsed.Seconds() * 8000)
+	forwarded := *packet
+	forwarded.Timestamp -= rf.audioTimestampBase
+	if rf.audioPCM16 {
+		// Tuya codec 101 is signed little-endian PCM, not G.711 mu-law.
+		// RTP L16 requires network byte order and a dynamic payload type.
+		if len(packet.Payload)%2 != 0 {
+			return
+		}
+		forwarded.PayloadType = 97
+		forwarded.Payload = make([]byte, len(packet.Payload))
+		for index := 0; index < len(packet.Payload); index += 2 {
+			forwarded.Payload[index], forwarded.Payload[index+1] = packet.Payload[index+1], packet.Payload[index]
+		}
+	}
 
 	// Serialize packet
-	data, err := packet.Marshal()
+	data, err := forwarded.Marshal()
 	if err != nil {
 		core.Logger.Error().Err(err).Msg("Error marshaling audio RTP packet")
 		return
@@ -462,6 +413,8 @@ func (rf *RTPForwarder) ForwardAudioPacket(packet *rtp.Packet) {
 }
 
 func (rf *RTPForwarder) Stop() {
+	rf.mutex.Lock()
+	defer rf.mutex.Unlock()
 	// Reset SSRCs
 	rf.videoSSRC = 0
 	rf.audioSSRC = 1
@@ -470,12 +423,34 @@ func (rf *RTPForwarder) Stop() {
 	rf.firstVideoPacket = true
 	rf.firstAudioPacket = true
 
+	// A new Tuya connection can start with unrelated source clocks.
+	rf.videoTsStarted = false
+	rf.audioTsStarted = false
+
 	// Clear all clients
 	for sessionID := range rf.clients {
-		rf.RemoveClient(sessionID)
+		rf.removeClientLocked(sessionID)
 	}
 
 	core.Logger.Trace().Msg("RTPForwarder stopped and all clients cleared")
+}
+
+func (rf *RTPForwarder) SetSourceSSRCs(video, audio uint32) {
+	rf.mutex.Lock()
+	defer rf.mutex.Unlock()
+	rf.videoSSRC, rf.audioSSRC = video, audio
+}
+
+func (rf *RTPForwarder) SetAudioPCM16(enabled bool) {
+	rf.mutex.Lock()
+	defer rf.mutex.Unlock()
+	rf.audioPCM16 = enabled
+}
+
+func (rf *RTPForwarder) SourceSSRCs() (uint32, uint32) {
+	rf.mutex.RLock()
+	defer rf.mutex.RUnlock()
+	return rf.videoSSRC, rf.audioSSRC
 }
 
 func (rf *RTPForwarder) GetClientCount() int {

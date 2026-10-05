@@ -1,82 +1,112 @@
+<p align="center">
+  <img src="custom_components/tuya_camera_bridge/brand/logo.png" alt="Tuya" width="220">
+</p>
+
 # Tuya Camera Bridge for Home Assistant
 
-A standalone Home Assistant add-on for Tuya Smart and Smart Life cameras that
-use Tuya's mobile WebRTC signaling path. The add-on authenticates with Tuya,
-discovers the cameras, converts their video to H.264 on demand and exposes each
-camera as a standard ONVIF device. No HACS integration is required.
+[![CI](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml)
+[![HACS validation](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml)
+[![HACS custom integration](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://www.hacs.dev/docs/faq/custom_repositories/)
+[![Home Assistant 2026.9+](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue.svg)](https://www.home-assistant.io/)
+[![License MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Architecture
+**Connect compatible Tuya Smart and Smart Life cameras from the Home Assistant
+UI.** Sign in with the account used in the mobile app; the integration discovers
+cameras and manages the media bridge automatically.
 
-```text
-Tuya Camera Bridge add-on
-  ├─ Ingress setup UI (password stays in memory)
-  ├─ Tuya account and camera discovery
-  ├─ private session storage in /data (0600)
-  ├─ Tuya mobile API session
-  ├─ MQTT wake-up and signaling
-  ├─ WebRTC / TURN media session
-  ├─ H.265 → H.264 transcode on demand
-  └─ ONVIF + RTSP on the local network
-         │
-         ▼
-Home Assistant built-in ONVIF integration → camera entities
-```
+[Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
+[Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
 
-The account password is submitted only during setup and is never written to
-disk. The session, regional endpoint and discovered cameras are stored in the
-add-on's private data directory so normal Home Assistant and add-on restarts do
-not require another login.
+## What you get
 
-## Current scope
+- Native camera entities, live video with audio, and fresh JPEG snapshots.
+- HLS streaming and WebRTC through Home Assistant's provider.
+- Account login, camera discovery, reconfiguration and session reauthentication.
+- A bridge installed with checksum verification and restarted after a crash.
+- H.264 passthrough; H.265 converted to H.264 at 720p / 15 fps for playback.
+- Setup through the UI: no separate add-on, ONVIF configuration or manual IDs.
 
-- Tuya Smart and Smart Life account namespaces.
-- Email or telephone password login.
-- Explicit country calling code; Brazil defaults to `55`.
-- One account and all compatible cameras discovered in that account.
-- H.264 video exposed through an ONVIF Profile S facade.
-- Native Home Assistant camera entities, live streaming and snapshots.
-- On-demand transcoding: CPU is used only while a stream or snapshot is open.
+**This is a beta using Tuya's private mobile APIs.** Compatibility depends on
+camera model and firmware. Internet is required for Tuya authentication and
+signaling; media can travel directly or through TURN. This project does not
+promise offline/local-only operation or compatibility with every Tuya camera.
+PTZ, two-way audio, camera settings and interactive MFA/captcha are not supported.
 
-Interactive captcha and MFA are detected but cannot currently be completed in
-the add-on. Accounts requiring either step must complete it in the mobile app
-first. This project relies on Tuya's private mobile APIs, so app-side changes can
-require a bridge update.
+## Install with HACS
 
-## Installation
+Requires **Home Assistant 2026.9+ on Linux amd64 or AArch64**, an existing HACS
+installation, and FFmpeg. Home Assistant OS and Container include FFmpeg;
+other Linux installations must provide a build with H.264/AAC encoding support.
 
-1. Add this repository URL to the Home Assistant add-on store.
-2. Install and start **Tuya Camera Bridge**.
-3. Open the add-on web UI, choose Tuya Smart or Smart Life, and enter the same
-   account and country code used in the mobile app.
-4. Home Assistant discovers one ONVIF device per camera. Confirm each device in
-   **Settings → Devices & services**. ONVIF is built into Home Assistant.
+[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-The add-on warms and persists one snapshot after startup. Home Assistant can
-show that image immediately while the camera wakes and the on-demand H.264 relay
-starts; the cache is refreshed in the background and survives restarts.
+1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
+   repositories**, selecting **Integration**.
+2. Select a published release; enable beta versions for `0.3.0b1`. Download it
+   and restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
+4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
+   and country calling code as the app (`55` for Brazil).
+5. Open a discovered camera and enable sound in the player.
 
-## Security
+Use a **published release**. A draft release is not downloadable by the public,
+and a development checkout may reference unpublished bridge files. First setup
+and upgrades need GitHub access to download the matching executable. The verified
+cache is reused on later starts. See [installation and migration](docs/installation.md).
 
-Live Tuya session material is stored only under the add-on's private `/data`
-directory with mode `0600`; the add-on no longer maps Home Assistant's `/config`.
-The Ingress UI is protected by Home Assistant authentication and sends no-cache
-and restrictive browser security headers. ONVIF/RTSP are currently unauthenticated
-on the local network so Home Assistant can adopt discovered cameras without a
-second credential step. Do not expose ports 8081+, 38554 or 38555 to the
-internet.
+This repository can be added manually to HACS; it is not currently listed in the
+HACS default catalog. Passing validation is separate from catalog acceptance.
 
-## Development
+## Tested cameras
 
-```bash
-pytest
-ruff check custom_components tuya-camera-bridge-addon/app tests
-docker run --rm -v "$PWD/tuya-camera-bridge-addon/bridge:/src" -w /src golang:1.26-bookworm \
-  bash -c 'gofmt -w . && go test ./... && CGO_ENABLED=0 go build -o tuya-camera-bridge .'
-```
+**Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736), firmware
+1.1.48**, tested using Tuya Smart, has passed live video, audio, snapshots,
+automatic bridge recovery and playback on the owner's phone. The owner identified
+the model from its [manufacturer listing](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
+Battery endurance and long idle/wake cycles have not been measured. This is one
+tested unit, not a guarantee for every firmware or other Tuya camera.
 
-## Credits and license
+See the [compatibility table](docs/compatibility.md) and
+[beta validation report](docs/validation-0.3.0b1.md). Report another model with the
+[compatibility form](https://github.com/eduardobittencourt/tuya-camera-ha/issues/new?template=compatibility_report.yml).
 
-MIT licensed. The media bridge derives from
-[aventproxy](https://github.com/thekoma/aventproxy) and its Avent WebRTC bridge.
-The vendored `tuya-mobile` implementation retains its own MIT license under the
-vendor directory. See [NOTICE](NOTICE).
+## How it runs
+
+The Python integration supervises a small Go subprocess that handles Tuya
+signaling and camera WebRTC. A private RTSP endpoint feeds an on-demand FFmpeg
+relay, which provides H.264/AAC to Home Assistant. These processes run inside
+the HA environment and use CPU/RAM, especially when converting H.265 video.
+
+For the tested camera, one HLS viewer used about 120 MiB for bridge plus relay,
+with roughly 65–74% of one CPU core. This excludes the rest of HA and is not a
+guarantee for other cameras or multiple viewers.
+
+Read [architecture](docs/architecture.md) for process lifecycle and transport
+choices. The standalone add-on remains a [legacy compatibility path](tuya-camera-bridge-addon/DOCS.md).
+
+## Privacy and support
+
+The account password is used for login and is not saved. Sessions are sensitive
+and stored in HA's `.storage`; treat backups as private. RTSP and relay HTTP
+listen on loopback, and remote access goes through HA authentication.
+
+Use [troubleshooting](docs/troubleshooting.md) and [support](SUPPORT.md) before
+opening an issue. Never publish credentials, tokens, `.storage`, raw bridge
+captures, camera IDs or private images. Report security problems through
+[private vulnerability reporting](SECURITY.md).
+
+## Contributing
+
+Compatibility reports, documentation fixes and code contributions are welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [development](docs/development.md),
+[release preparation](docs/releasing.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
+## Credits
+
+Community project maintained by [Eduardo Bittencourt](https://github.com/eduardobittencourt).
+Software is MIT licensed; original notices for aventproxy/Avent and the vendored
+`tuya-mobile` library are preserved. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Tuya names and images belong to their respective owners. The project is not
+affiliated with or endorsed by Tuya or Home Assistant. [Image provenance](custom_components/tuya_camera_bridge/BRAND_ASSETS.md).

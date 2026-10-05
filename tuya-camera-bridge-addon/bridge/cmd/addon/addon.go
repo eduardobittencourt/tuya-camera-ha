@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -55,7 +58,16 @@ type Camera struct {
 
 func loadConfig(path string) (BridgeConfig, error) {
 	var cfg BridgeConfig
-	data, err := os.ReadFile(path)
+	var data []byte
+	var err error
+	if path == "-" {
+		data, err = io.ReadAll(io.LimitReader(os.Stdin, 1024*1024+1))
+	} else {
+		data, err = os.ReadFile(path)
+	}
+	if len(data) > 1024*1024 {
+		return cfg, fmt.Errorf("bridge config exceeds maximum size")
+	}
 	if err != nil {
 		return cfg, fmt.Errorf("read %s: %w", path, err)
 	}
@@ -164,8 +176,20 @@ and serve every camera under it from one RTSP server, each on its own path.
 
 Example:
   tuya-camera-bridge addon --config /config/tuya_camera_bridge_<entry_id>.json`,
-		RunE: runAddon,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := runAddon(cmd, args)
+			managed, _ := cmd.Flags().GetBool("managed")
+			if managed && err != nil {
+				event := "error"
+				if tuya.IsAuthenticationError(err) {
+					event = "auth_required"
+				}
+				emitManaged(map[string]interface{}{"event": event})
+			}
+			return err
+		},
 	}
+	cmd.Flags().Bool("managed", false, "Integration-managed loopback RTSP with JSON status events and stdin config")
 	cmd.Flags().String("config", "", "Path to the bridge config JSON written by the HA integration")
 	cmd.Flags().Bool("onvif", false, "Expose each camera as an ONVIF H.264 device")
 	cmd.Flags().Int("onvif-port", 8081, "First ONVIF HTTP port (one consecutive port per camera)")
@@ -182,6 +206,10 @@ Example:
 func runAddon(cmd *cobra.Command, args []string) error {
 	cfgPath, _ := cmd.Flags().GetString("config")
 	onvifEnabled, _ := cmd.Flags().GetBool("onvif")
+	managed, _ := cmd.Flags().GetBool("managed")
+	if managed && onvifEnabled {
+		return fmt.Errorf("managed mode cannot expose ONVIF")
+	}
 	externalSource, _ := cmd.Flags().GetBool("external-source")
 
 	cfg, err := loadConfig(cfgPath)
@@ -193,7 +221,7 @@ func runAddon(cmd *cobra.Command, args []string) error {
 	}
 
 	port := cfg.BridgePort
-	if port == 0 {
+	if port == 0 && !managed {
 		port = 38554
 	}
 
@@ -274,6 +302,16 @@ func runAddon(cmd *cobra.Command, args []string) error {
 	if !externalSource {
 		rtspServer = rtsp.NewRTSPServer(port, storageManager)
 		rtspServer.MobileClient = client
+		if managed {
+			rtspServer.ListenHost = "127.0.0.1"
+			rtspServer.OnStatus = func(id, state string, statusErr error) {
+				event := "camera_status"
+				if tuya.IsAuthenticationError(statusErr) {
+					event = "auth_required"
+				}
+				emitManaged(map[string]interface{}{"event": event, "camera_id": id, "state": state})
+			}
+		}
 		rtspServer.Talkback = cfg.Talkback
 		if cfg.Talkback {
 			core.Logger.Info().Msg("Two-way audio enabled: streams will ask the camera for talkback")
@@ -282,6 +320,7 @@ func runAddon(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("start RTSP server: %w", err)
 		}
 		defer rtspServer.Stop()
+		port = rtspServer.GetPort()
 		core.Logger.Info().Msgf("Serving %d cameras on port %d: %s", len(infos), port, strings.Join(pathLog, " "))
 	} else {
 		core.Logger.Info().Msgf("Using external Tuya RTSP source on port %d: %s", port, strings.Join(pathLog, " "))
@@ -319,10 +358,42 @@ func runAddon(cmd *cobra.Command, args []string) error {
 		core.Logger.Info().Msgf("ONVIF gateway enabled on ports %d-%d; H.264 RTSP on %d", onvifPort, onvifPort+len(proxyCameras)-1, onvifRTSPPort)
 	}
 
+	managedErrors := make(chan error, 1)
+	if managed {
+		cameras := make([]map[string]interface{}, 0, len(camsWithPath))
+		for i, camera := range camsWithPath {
+			var skill tuya.Skill
+			_ = json.Unmarshal([]byte(infos[i].Skill), &skill)
+			cameras = append(cameras, map[string]interface{}{"camera_id": camera.ID, "path": camera.Path, "hevc": tuya.IsHEVC(&skill, tuya.GetStreamType(&skill, "hd"))})
+		}
+		emitManaged(map[string]interface{}{"event": "ready", "source_port": port, "cameras": cameras})
+		if client != nil {
+			go func() {
+				ticker := time.NewTicker(5 * time.Minute)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						if _, err := client.GetUserInfo(); tuya.IsAuthenticationError(err) {
+							managedErrors <- err
+							return
+						}
+					}
+				}
+			}()
+		}
+	}
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 	if gateway == nil {
-		<-sigChan
+		select {
+		case <-sigChan:
+		case err := <-managedErrors:
+			return err
+		}
 	} else {
 		select {
 		case <-sigChan:
@@ -346,4 +417,12 @@ func proxyPath(cameraID string) string {
 		id = "camera"
 	}
 	return "tuya_" + id
+}
+
+var managedOutputMu sync.Mutex
+
+func emitManaged(event map[string]interface{}) {
+	managedOutputMu.Lock()
+	defer managedOutputMu.Unlock()
+	_ = json.NewEncoder(os.Stdout).Encode(event)
 }

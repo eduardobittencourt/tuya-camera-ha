@@ -12,11 +12,6 @@
           "application": "Application"
         }
       },
-      "camera": {
-        "title": "Select a camera",
-        "description": "Only Tuya cameras using the mobile WebRTC protocol are supported.",
-        "data": {"camera_id": "Camera"}
-      },
       "reauth_confirm": {
         "title": "Reconnect your Tuya account",
         "description": "The current Tuya session expired. Enter the account password to issue a new session; the password is not stored.",
@@ -42,7 +37,9 @@
     "abort": {
       "already_configured": "This account is already configured",
       "wrong_account": "The credentials belong to a different Tuya account",
-      "reauth_successful": "The Tuya account was reconnected"
+      "reauth_successful": "The Tuya account was reconnected",
+      "incomplete_session": "The Tuya session is incomplete",
+      "reconfigure_successful": "The Tuya account was reconnected"
     }
   }
 }

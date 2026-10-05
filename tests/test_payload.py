@@ -1,14 +1,6 @@
-import sys
 from pathlib import Path
-from types import ModuleType
 
-package = ModuleType("custom_components.tuya_camera_bridge")
-package.__path__ = [
-    str(Path(__file__).parents[1] / "custom_components" / "tuya_camera_bridge")
-]
-sys.modules["custom_components.tuya_camera_bridge"] = package
-
-from custom_components.tuya_camera_bridge.payload import (  # noqa: E402
+from custom_components.tuya_camera_bridge.payload import (
     bridge_config_filename,
     build_bridge_config,
     sanitize_rtsp_path,
@@ -57,8 +49,9 @@ def test_bridge_config_carries_the_selected_mobile_app_profile():
     )
     assert config["package_name"] == "com.tuya.smart"
     assert len(config["app_key"]) == 20
-    assert "app_version" not in config
-    assert "ttid" not in config
+    assert config["app_version"] == "7.8.6"
+    assert config["ttid"] == "international"
+    assert config["et"] == "3"
     assert config["cameras"] == [
         {
             "camera_id": "camera",
