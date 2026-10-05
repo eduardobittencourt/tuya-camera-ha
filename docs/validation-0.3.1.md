@@ -89,6 +89,35 @@ succeeded; simultaneous viewer startup is not established by this validation.
 - Temporary diagnostic modules and synthetic test tools were removed from HA.
 
 
+## Published 0.3.2 catalog compatibility fix
+
+The catalog's hassfest job initially failed before running Docker: its helper
+searches the entire clone for `*manifest.json`, so it counted `binary_manifest.json`
+as a second integration manifest. The checksum file was renamed to
+`bridge_checksums.json`, its reader and release tooling were updated, and the
+repository check now rejects ambiguous catalog discovery.
+
+Both push and PR CI suites and official HACS/hassfest validators passed on
+release commit `ec8cda1de4f4f226101c7612790c615d0f029ce5` before publication.
+Downloaded release assets matched the reviewed source and executable pins.
+The HACS catalog PR subsequently passed all 12 checks, including hassfest.
+
+The existing v0.3.1 installation was upgraded through HACS's normal stable flow
+with betas disabled. All 33 files matched the public v0.3.2 ZIP, with no extra
+files (including no obsolete checksum manifest). Configuration validation passed
+and Core was restarted. The previously absent v0.3.2 executable was downloaded
+automatically; SHA256 and `0700` permissions matched expectations. The account
+configuration remained unchanged, one managed bridge process remained, and all
+five integration entries loaded again.
+
+Native HA WebRTC again received actual H.264 video and Opus audio. Two warm
+snapshots returned distinct valid JPEGs with HTTP 200 in 0.94 and 1.85 seconds;
+an unauthenticated request returned HTTP 403. HACS reported v0.3.2 installed and
+available, no manual tag selected and betas disabled. HA was RUNNING with no
+active FFmpeg relay processes after the probes. The cold-image limitation and
+simultaneous-viewer uncertainty observed on v0.3.1 remain applicable: this
+release changes checksum discovery/version metadata, not media behavior.
+
 ## Limits
 
 This is not a blank HA installation or a new account-login test. It covers the
