@@ -41,6 +41,16 @@ camera is reachable. `video` and `last_video_received` report actual received
 packets. `disconnected`/unavailable indicates bridge or detected media failure.
 An old timestamp while idle is not a current connectivity test.
 
+## First snapshot fails after startup or reload
+
+Home Assistant limits camera image requests to ten seconds. A cold battery
+camera can take longer to wake and establish its Tuya connection, so the first
+image may fail even when live video works. Open live video, wait for actual
+playback and retry the image. Release v0.3.1 reduces FFmpeg probing overhead,
+but live testing still observed intermittent cold-image failures. See the
+[stable validation report](validation-0.3.1.md). An old cached image is not used
+to hide a disconnected camera.
+
 ## Video opens without sound
 
 Enable audio in the HA player and check the phone/browser's sound settings.

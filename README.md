@@ -70,6 +70,9 @@ automatic bridge recovery and playback on the owner's phone. The owner identifie
 the model from its [manufacturer listing](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
 Battery endurance and long idle/wake cycles have not been measured. This is one
 tested unit, not a guarantee for every firmware or other Tuya camera.
+Cold snapshots can exceed HA's ten-second deadline; see the
+[stable validation results](docs/validation-0.3.1.md) and
+[troubleshooting](docs/troubleshooting.md#first-snapshot-fails-after-startup-or-reload).
 
 See the [compatibility table](docs/compatibility.md) and
 [beta validation report](docs/validation-0.3.0b1.md). Report another model with the

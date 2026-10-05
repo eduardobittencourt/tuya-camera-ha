@@ -64,6 +64,9 @@ Vídeo HEVC/1080p, som PCM, capturas de imagem, recuperação do bridge e reprod
 no celular funcionaram. O proprietário identificou o modelo por este
 [anúncio do fabricante](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
 Ainda não medimos autonomia da bateria nem ciclos longos de repouso e despertar.
+A primeira captura após iniciar ou recarregar a integração pode exceder o limite
+de dez segundos do HA. Abra o vídeo, aguarde a reprodução e tente novamente.
+Os resultados e essa limitação estão no [relatório da versão estável](validation-0.3.1.md).
 
 O teste contínuo de cinco minutos não comprova estabilidade durante dias nem
 recuperação após toda falha de rede. Veja a [tabela de compatibilidade](compatibility.md)

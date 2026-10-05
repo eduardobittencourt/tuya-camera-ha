@@ -49,8 +49,45 @@ valid JPEGs with HTTP 200 in 9.85, 5.96 and 6.00 seconds. These are observations
 on this device/network, not guaranteed timing for other cameras or connections.
 
 The H.264/H.265 synthetic media tests now request a snapshot as the first media
-consumer under the same ten-second deadline. Final release validation must also
-use the published HACS package, replacing the temporary diagnostic module.
+consumer under the same ten-second deadline. Both codec tests and all other CI
+jobs passed on release commit `52bba2af75a2906ffe746167d68345d2551341d8` before
+publication.
+
+## Published 0.3.1 reinstallation
+
+The integration was disabled and its package removed through HACS. The component
+directory was confirmed absent and no managed bridge process remained. The
+existing configuration entry was preserved. With betas disabled, HACS offered
+v0.3.1 and installed it through the normal download flow without selecting a
+version manually. All 33 files matched the published ZIP exactly.
+
+HA configuration validation passed and Core was restarted to replace the
+in-memory diagnostic module with the public release. Startup downloaded the
+previously absent v0.3.1 executable, whose SHA256 matched the packaged pin and
+whose permissions were `0700`. The existing camera entity and account/session
+data were preserved. HACS, Tuya, Intelbras, Motorola and MQTT entries loaded.
+
+Five cold-image trials each reloaded the integration before requesting an image.
+Three returned valid JPEGs with HTTP 200 in 5.72, 9.42 and 6.08 seconds. Two
+returned HTTP 500 at 10.49 and 10.02 seconds. **Cold snapshots remain intermittent
+when camera wake-up/signaling exceeds HA's ten-second deadline.** The probe
+change improves latency but does not eliminate this limitation. These results
+supersede the initial candidate's three successful trials; they are not a
+promise of reliable first-image timing.
+
+A first simultaneous HLS/native-WebRTC attempt after the cold-image tests failed
+with an HLS request timeout and a WebRTC negotiation error. Sequential retries
+succeeded; simultaneous viewer startup is not established by this validation.
+
+- Native HA WebRTC received actual H.264 video and Opus audio.
+- HLS delivered 13 distinct fragments over approximately 65 seconds, with zero
+  decode failures; video was H.264 1280x720 and audio AAC.
+- Two warm snapshot requests returned valid, distinct JPEGs.
+- Unauthenticated camera image requests returned HTTP 403.
+- HACS reported v0.3.1 installed, v0.3.1 available and betas disabled, with no
+  manually selected tag. HA was RUNNING and one managed bridge process remained.
+- Temporary diagnostic modules and synthetic test tools were removed from HA.
+
 
 ## Limits
 
