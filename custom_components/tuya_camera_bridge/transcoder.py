@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import secrets
 from collections.abc import Callable
-from contextlib import suppress
 
 from .bridge import stop_process
 
@@ -40,6 +39,7 @@ class FfmpegRelay:
         server, self._server = self._server, None
         if server is not None:
             server.close()
+            server.abort_clients()
         tasks = tuple(self._tasks)
         for task in tasks:
             task.cancel()
@@ -47,7 +47,6 @@ class FfmpegRelay:
         await asyncio.gather(*(stop_process(process) for process in tuple(self._processes)))
         self._processes.clear()
         if server is not None:
-            server.close_clients()
             await server.wait_closed()
 
     def command(self) -> list[str]:
@@ -126,6 +125,9 @@ class FfmpegRelay:
                 await stop_process(process)
                 self._processes.discard(process)
             writer.close()
-            with suppress(OSError, ConnectionError):
-                await writer.wait_closed()
+            try:
+                async with asyncio.timeout(2):
+                    await writer.wait_closed()
+            except (OSError, ConnectionError, TimeoutError):
+                writer.transport.abort()
             self._tasks.discard(task)

@@ -13,8 +13,10 @@
 - Migrate existing version-1 integration entries and remove obsolete bridge JSON.
 - Bound WebRTC connection waits, clean up partial connections, and fix races in
   the wait primitive and RTSP listener shutdown.
-- Add Home Assistant lifecycle/config-flow tests, real synthetic-camera media
-  tests, race checks and reproducible release packaging.
+- Add Home Assistant lifecycle/config-flow tests, real synthetic-camera HLS and
+  WebRTC media tests, race checks and reproducible release packaging.
+- Drain subprocess output and abort stalled HTTP consumers during shutdown,
+  including when FFmpeg requires a forced termination.
 
 This beta requires Home Assistant 2026.9+. Real Tuya model/firmware compatibility
 must be verified separately. Internet access to Tuya remains necessary. PTZ,

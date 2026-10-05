@@ -59,3 +59,23 @@ async def test_stop_reaps_live_transcoders(tmp_path, socket_enabled):
     assert all(process.returncode is not None for process in processes)
     writer.close()
     await writer.wait_closed()
+
+
+async def test_stop_aborts_a_consumer_that_does_not_read(tmp_path, socket_enabled):
+    executable = tmp_path / "ffmpeg"
+    executable.write_text(f"#!{sys.executable}\nimport sys,signal\nsignal.signal(signal.SIGTERM,signal.SIG_IGN)\nwhile True:\n sys.stdout.buffer.write(b'x'*65536)\n sys.stdout.buffer.flush()\n")
+    executable.chmod(0o700)
+    relay = FfmpegRelay(str(executable), lambda: "rtsp://127.0.0.1:1234/test", lambda: False)
+    await relay.start()
+    parsed = urlsplit(relay.url)
+    reader, writer = await asyncio.open_connection(parsed.hostname, parsed.port, limit=1024)
+    writer.write(f"GET {parsed.path} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode())
+    await writer.drain()
+    await reader.readuntil(b"\r\n\r\n")
+    await asyncio.sleep(.2)
+    processes = tuple(relay._processes)
+    async with asyncio.timeout(15):
+        await relay.stop()
+    assert processes and all(process.returncode is not None for process in processes)
+    assert not relay._tasks
+    writer.transport.abort()

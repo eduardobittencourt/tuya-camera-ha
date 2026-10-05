@@ -31,12 +31,26 @@ async def stop_process(process: asyncio.subprocess.Process) -> None:
         return
     with suppress(ProcessLookupError):
         os.killpg(process.pid, signal.SIGTERM)
+
+    async def drain(stream: asyncio.StreamReader | None) -> None:
+        if stream is not None:
+            # An existing monitor/communicate task may already own this reader.
+            with suppress(RuntimeError):
+                while await stream.read(65536):
+                    pass
+
+    drains = [asyncio.create_task(drain(stream)) for stream in (process.stdout, process.stderr)]
     try:
-        await asyncio.wait_for(process.wait(), STOP_TIMEOUT)
-    except TimeoutError:
-        with suppress(ProcessLookupError):
-            os.killpg(process.pid, signal.SIGKILL)
-        await process.wait()
+        try:
+            await asyncio.wait_for(process.wait(), STOP_TIMEOUT)
+        except TimeoutError:
+            with suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+            await process.wait()
+    finally:
+        for task in drains:
+            task.cancel()
+        await asyncio.gather(*drains, return_exceptions=True)
 
 
 class ManagedBridge:

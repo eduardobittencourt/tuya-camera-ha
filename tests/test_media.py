@@ -1,6 +1,7 @@
 """Real codec/transport tests with a synthetic camera; no Tuya account needed."""
 import asyncio
 import io
+import json
 import os
 import socket
 from pathlib import Path
@@ -25,6 +26,59 @@ def media_binaries():
     return ffmpeg, mediamtx
 
 
+def free_port():
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+async def inspect_webrtc(relay, ffmpeg, tmp_path):
+    """Use HA's two-source go2rtc arrangement and receive actual WebRTC RTP."""
+    go2rtc = os.environ.get("TEST_GO2RTC_BINARY")
+    receiver = os.environ.get("TEST_WEBRTC_PROBE")
+    if not go2rtc or not receiver:
+        return
+    api_port, rtsp_port, rtc_port = free_port(), free_port(), free_port()
+    config = tmp_path / "go2rtc.yml"
+    config.write_text(json.dumps({
+        "log": {"level": "error"}, "api": {"listen": f"127.0.0.1:{api_port}"},
+        "rtsp": {"listen": f"127.0.0.1:{rtsp_port}"},
+        "webrtc": {
+            "listen": f"127.0.0.1:{rtc_port}", "candidates": [f"127.0.0.1:{rtc_port}"], "ice_servers": [],
+            "filters": {"loopback": True, "ips": ["127.0.0.1"], "networks": ["udp4"]},
+        },
+        "ffmpeg": {"bin": ffmpeg},
+        "streams": {"camera": [relay.url, "ffmpeg:camera#audio=opus#query=log_level=debug"]},
+    }))
+    server = await asyncio.create_subprocess_exec(
+        go2rtc, "-config", str(config), stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
+    )
+    probe = None
+    try:
+        async with asyncio.timeout(10):
+            while True:
+                try:
+                    _, writer = await asyncio.open_connection("127.0.0.1", api_port)
+                    writer.close()
+                    await writer.wait_closed()
+                    break
+                except OSError:
+                    await asyncio.sleep(.05)
+        probe = await asyncio.create_subprocess_exec(
+            receiver, f"http://127.0.0.1:{api_port}/api/webrtc?src=camera",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, start_new_session=True,
+        )
+        async with asyncio.timeout(60):
+            stdout, stderr = await probe.communicate()
+        assert probe.returncode == 0, stderr.decode()
+        assert b"H.264 video and Opus audio" in stdout
+    finally:
+        if probe is not None:
+            await stop_process(probe)
+        await stop_process(server)
+
+
 def inspect_stream(url):
     import av
     with av.open(url, timeout=(20, 15)) as container:
@@ -41,9 +95,7 @@ def inspect_stream(url):
 @pytest.mark.parametrize("codec", ["libx264", "libx265"])
 async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, tmp_path, socket_enabled, hass):
     ffmpeg, mediamtx = media_binaries()
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
+    port = free_port()
     config = Path(tmp_path / "mediamtx.yml")
     config.write_text(f"logLevel: error\nrtspAddress: 127.0.0.1:{port}\nrtspTransports: [tcp]\nrtmp: false\nhls: false\nwebrtc: false\nsrt: false\nmoq: false\npaths:\n  camera:\n    source: publisher\n")
     server = await asyncio.create_subprocess_exec(
@@ -91,6 +143,7 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
             assert any(container.decode(video=0))
         await stream.remove_provider(output)
         stream = None
+        await inspect_webrtc(relay, ffmpeg, tmp_path)
         image = await relay.snapshot()
         assert image and image.startswith(b"\xff\xd8")
         await stop_process(publisher)

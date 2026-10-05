@@ -56,6 +56,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
       - run: pip install '.[test]'
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: |
@@ -63,10 +67,19 @@ jobs:
             https://github.com/bluenviron/mediamtx/releases/download/v1.21.1/mediamtx_v1.21.1_linux_amd64.tar.gz \
             --output /tmp/mediamtx.tar.gz
           tar -xzf /tmp/mediamtx.tar.gz -C /tmp mediamtx
-      - run: pytest -m media --timeout=90
+          curl --fail --location --retry 3 \
+            https://github.com/AlexxIT/go2rtc/releases/download/v1.9.14/go2rtc_linux_amd64 \
+            --output /tmp/go2rtc
+          echo "32d616af226bd731678ffde328b94cfb94e30339bfefc469cfb76323144615a6  /tmp/go2rtc" | sha256sum --check
+          chmod 0755 /tmp/go2rtc
+      - working-directory: tuya-camera-bridge-addon/bridge
+        run: go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
+      - run: pytest -m media --timeout=120
         env:
           TEST_FFMPEG_BINARY: /usr/bin/ffmpeg
           TEST_MEDIAMTX_BINARY: /tmp/mediamtx
+          TEST_GO2RTC_BINARY: /tmp/go2rtc
+          TEST_WEBRTC_PROBE: /tmp/webrtc-probe
 
   addon:
     runs-on: ubuntu-latest

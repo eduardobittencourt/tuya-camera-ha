@@ -103,13 +103,19 @@ python scripts/package_release.py
 ```
 
 Real media tests use a synthetic RTSP camera and check H.264, H.265, audio,
-snapshots and source disconnection:
+native HA HLS, snapshots and source disconnection:
 
 ```bash
 TEST_FFMPEG_BINARY=/usr/bin/ffmpeg \
 TEST_MEDIAMTX_BINARY=/path/to/mediamtx \
 pytest -m media --timeout=90
 ```
+
+For the WebRTC receive test, also set `TEST_GO2RTC_BINARY` to go2rtc 1.9.14 and
+`TEST_WEBRTC_PROBE` to the executable built with
+`go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc` from the bridge
+directory. This checks H.264 video and Opus audio using the same two-source
+arrangement as HA's go2rtc provider. CI runs this extended test for both codecs.
 
 MediaMTX is only a development test fixture for the new integration. CI also
 builds the compatibility add-on Docker image. Release packaging produces amd64
