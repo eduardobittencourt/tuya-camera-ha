@@ -12,11 +12,6 @@
           "application": "Aplicativo"
         }
       },
-      "camera": {
-        "title": "Selecione uma câmera",
-        "description": "Apenas câmeras Tuya que usam o protocolo WebRTC móvel são compatíveis.",
-        "data": {"camera_id": "Câmera"}
-      },
       "reauth_confirm": {
         "title": "Reconecte sua conta Tuya",
         "description": "A sessão Tuya atual expirou. Informe a senha para emitir uma nova sessão; a senha não será armazenada.",
@@ -42,7 +37,9 @@
     "abort": {
       "already_configured": "Esta conta já está configurada",
       "wrong_account": "As credenciais pertencem a outra conta Tuya",
-      "reauth_successful": "A conta Tuya foi reconectada"
+      "reauth_successful": "A conta Tuya foi reconectada",
+      "incomplete_session": "A sessão Tuya está incompleta",
+      "reconfigure_successful": "A conta Tuya foi reconectada"
     }
   }
 }

@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
+
+	"github.com/pion/rtp"
 	"syscall"
 	"time"
 
@@ -31,6 +34,8 @@ func reuseAddrControl(network, address string, c syscall.RawConn) error {
 }
 
 type RTSPServer struct {
+	ListenHost     string
+	OnStatus       func(cameraID, state string, err error)
 	port           int
 	listener       net.Listener
 	storageManager *storage.StorageManager
@@ -131,11 +136,12 @@ func (s *RTSPServer) Start() error {
 	}
 
 	lc := net.ListenConfig{Control: reuseAddrControl}
-	listener, err := lc.Listen(s.ctx, "tcp", fmt.Sprintf(":%d", s.port))
+	listener, err := lc.Listen(s.ctx, "tcp", net.JoinHostPort(s.ListenHost, fmt.Sprint(s.port)))
 	if err != nil {
 		return fmt.Errorf("failed to listen on port %d: %v", s.port, err)
 	}
 
+	s.port = listener.Addr().(*net.TCPAddr).Port
 	s.listener = listener
 	s.running = true
 
@@ -235,14 +241,14 @@ type ServerStats struct {
 }
 
 func (s *RTSPServer) acceptConnections() {
-	for s.running {
+	for s.IsRunning() {
 		select {
 		case <-s.ctx.Done():
 			return
 		default:
 			conn, err := s.listener.Accept()
 			if err != nil {
-				if s.running {
+				if s.IsRunning() {
 					core.Logger.Error().Err(err).Msg("Error accepting connection")
 				}
 				continue
@@ -379,7 +385,10 @@ func (s *RTSPServer) getOrCreateStream(camera *storage.CameraInfo, streamResolut
 	if s.mqttManager != nil {
 		mqttClient, err := s.mqttManager.GetClient(camera.DeviceID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get MQTT client: %v", err)
+			if s.OnStatus != nil {
+				s.OnStatus(camera.DeviceID, "error", err)
+			}
+			return nil, fmt.Errorf("failed to get MQTT client: %w", err)
 		}
 		stream.webrtcBridge.SetMQTTClient(mqttClient)
 	}
@@ -575,6 +584,7 @@ func (cs *CameraStream) startStream() {
 	}
 	cs.mutex.Unlock()
 
+	var lastErr error
 	for attempt := 1; attempt <= 2; attempt++ {
 		if attempt > 1 {
 			core.Logger.Info().Msgf("Retrying stream for camera %s (attempt %d/2)", cs.camera.DeviceName, attempt)
@@ -608,13 +618,15 @@ func (cs *CameraStream) startStream() {
 			return
 		}
 
+		lastErr = err
 		core.Logger.Error().Err(err).Msgf("Failed to start WebRTC bridge (attempt %d/2)", attempt)
 		cs.mutex.Unlock()
+		if tuya.IsAuthenticationError(err) {
+			break
+		}
 	}
 
-	cs.mutex.Lock()
-	cs.stopStreamInternal()
-	cs.mutex.Unlock()
+	cs.handleBridgeError(fmt.Errorf("camera connection attempts exhausted: %w", lastErr))
 }
 
 func (cs *CameraStream) stopStream() {
@@ -657,6 +669,14 @@ func (cs *CameraStream) attachBridgeErrorHandler() {
 	if cs.webrtcBridge == nil {
 		return
 	}
+	var lastVideo atomic.Int64
+	cs.webrtcBridge.OnVideoPacket = func(_ *rtp.Packet) {
+		now := time.Now().Unix()
+		previous := lastVideo.Load()
+		if now-previous >= 10 && lastVideo.CompareAndSwap(previous, now) && cs.server != nil && cs.server.OnStatus != nil {
+			cs.server.OnStatus(cs.camera.DeviceID, "video", nil)
+		}
+	}
 	cs.webrtcBridge.OnError = func(err error) {
 		cs.handleBridgeError(err)
 	}
@@ -673,6 +693,9 @@ func (cs *CameraStream) handleBridgeError(err error) {
 	cs.handlingError = true
 
 	core.Logger.Error().Err(err).Msgf("WebRTC error for camera %s", cs.camera.DeviceName)
+	if cs.server != nil && cs.server.OnStatus != nil {
+		cs.server.OnStatus(cs.camera.DeviceID, "error", err)
+	}
 
 	clients := make([]*RTSPClient, 0, len(cs.clients))
 	for _, client := range cs.clients {

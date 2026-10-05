@@ -1,4 +1,4 @@
-"""Config flow for Tuya Camera Bridge."""
+"""UI-driven account setup and reauthentication without persisting passwords."""
 from __future__ import annotations
 
 import voluptuous as vol
@@ -11,14 +11,13 @@ from .api import LoginResult, TuyaCameraApi
 from .const import (
     CONF_API_HOST,
     CONF_APPLICATION,
-    CONF_CAMERA_ID,
-    CONF_CAMERA_NAME,
+    CONF_CAMERAS,
     CONF_COUNTRY_CODE,
     CONF_ECODE,
     CONF_PARTNER,
     CONF_PHONE_DEVICE_ID,
-    CONF_PRODUCT_ID,
     CONF_SID,
+    CONF_TIMEZONE,
     CONF_UID,
     DEFAULT_APPLICATION,
     DEFAULT_COUNTRY_CODE,
@@ -34,178 +33,105 @@ from .vendor.tuya_mobile.errors import (
 )
 
 
-def _credentials_schema(
-    default_username: str = "",
-    default_country_code: str = DEFAULT_COUNTRY_CODE,
-    default_application: str = DEFAULT_APPLICATION,
-) -> vol.Schema:
-    return vol.Schema(
-        {
-            vol.Required(CONF_USERNAME, default=default_username): str,
-            vol.Required(CONF_PASSWORD): str,
-            vol.Required(CONF_COUNTRY_CODE, default=default_country_code): str,
-            vol.Required(CONF_APPLICATION, default=default_application): SelectSelector(
-                SelectSelectorConfig(
-                    options=[
-                        SelectOptionDict(value="tuya_smart", label="Tuya Smart"),
-                        SelectOptionDict(value="smart_life", label="Smart Life"),
-                    ]
-                )
-            ),
-        }
-    )
+def _credentials_schema(data: dict | None = None) -> vol.Schema:
+    defaults = data or {}
+    return vol.Schema({
+        vol.Required(CONF_USERNAME, default=defaults.get(CONF_USERNAME, "")): str,
+        vol.Required(CONF_PASSWORD): str,
+        vol.Required(CONF_COUNTRY_CODE, default=defaults.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE)): str,
+        vol.Required(CONF_APPLICATION, default=defaults.get(CONF_APPLICATION, DEFAULT_APPLICATION)): SelectSelector(
+            SelectSelectorConfig(options=[
+                SelectOptionDict(value="tuya_smart", label="Tuya Smart"),
+                SelectOptionDict(value="smart_life", label="Smart Life"),
+            ])
+        ),
+    })
 
 
 def _flow_error(error: Exception) -> str:
-    if isinstance(error, TuyaMobileInvalidAuth):
-        return "invalid_auth"
-    if isinstance(error, TuyaMobileAccountLocked):
-        return "account_locked"
-    if isinstance(error, TuyaMobileCaptchaRequired):
-        return "captcha_required"
-    if isinstance(error, TuyaMobileMFARequired):
-        return "mfa_required"
-    if isinstance(error, TuyaMobileProfileExpired):
-        return "profile_expired"
-    if isinstance(error, TuyaMobileTransportError):
-        return "cannot_connect"
+    for error_type, key in (
+        (TuyaMobileInvalidAuth, "invalid_auth"), (TuyaMobileAccountLocked, "account_locked"),
+        (TuyaMobileCaptchaRequired, "captcha_required"), (TuyaMobileMFARequired, "mfa_required"),
+        (TuyaMobileProfileExpired, "profile_expired"), (TuyaMobileTransportError, "cannot_connect"),
+    ):
+        if isinstance(error, error_type):
+            return key
     return "unknown"
 
 
+def entry_data(login: LoginResult) -> dict:
+    return {
+        CONF_USERNAME: login.username, CONF_COUNTRY_CODE: login.country_code, CONF_APPLICATION: login.application,
+        CONF_SID: login.sid, CONF_ECODE: login.ecode, CONF_UID: login.uid,
+        CONF_PARTNER: login.partner_identity, CONF_API_HOST: login.api_host,
+        CONF_PHONE_DEVICE_ID: login.phone_device_id, CONF_TIMEZONE: login.timezone,
+        CONF_CAMERAS: [{"camera_id": item.device_id, "camera_name": item.name, "product_id": item.product_id}
+                       for item in login.cameras],
+    }
+
+
 class TuyaCameraBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Configure a Tuya account and one camera."""
+    """One entry per Tuya account, with all discovered cameras."""
 
-    VERSION = 1
+    VERSION = 2
 
-    def __init__(self) -> None:
-        self._login: LoginResult | None = None
-        self._reauth_entry = None
+    async def _login(self, user_input: dict) -> LoginResult:
+        api = TuyaCameraApi(async_get_clientsession(self.hass))
+        return await api.async_login(
+            user_input[CONF_USERNAME].strip(), user_input[CONF_PASSWORD],
+            user_input[CONF_COUNTRY_CODE].strip().lstrip("+"), user_input[CONF_APPLICATION],
+        )
+
+    @staticmethod
+    def _validate(login: LoginResult) -> str | None:
+        if not all((login.partner_identity, login.sid, login.ecode, login.uid)):
+            return "incomplete_session"
+        if not login.cameras:
+            return "no_devices"
+        return None
 
     async def async_step_user(self, user_input=None):
-        if self._async_current_entries():
-            return self.async_abort(reason="single_instance_allowed")
         errors = {}
         if user_input is not None:
             try:
-                api = TuyaCameraApi(async_get_clientsession(self.hass))
-                self._login = await api.async_login(
-                    user_input[CONF_USERNAME],
-                    user_input[CONF_PASSWORD],
-                    user_input[CONF_COUNTRY_CODE].lstrip("+"),
-                    user_input[CONF_APPLICATION],
-                )
-                if not self._login.partner_identity:
-                    errors["base"] = "incomplete_session"
-                elif not self._login.cameras:
-                    errors["base"] = "no_devices"
+                login = await self._login(user_input)
+            except Exception as err:  # noqa: BLE001 - map errors without logging credential-bearing details
+                errors["base"] = _flow_error(err)
+            else:
+                if error := self._validate(login):
+                    errors["base"] = error
                 else:
-                    return await self.async_step_camera()
-            except Exception as error:  # noqa: BLE001 - config-flow boundary maps typed errors
-                errors["base"] = _flow_error(error)
-        return self.async_show_form(
-            step_id="user", data_schema=_credentials_schema(), errors=errors
-        )
+                    await self.async_set_unique_id(f"{login.application}_{login.uid}")
+                    self._abort_if_unique_id_configured()
+                    if any(entry.data.get(CONF_UID) == login.uid and entry.data.get(CONF_APPLICATION) == login.application
+                           for entry in self._async_current_entries()):
+                        return self.async_abort(reason="already_configured")
+                    return self.async_create_entry(title="Tuya cameras", data=entry_data(login))
+        return self.async_show_form(step_id="user", data_schema=_credentials_schema(), errors=errors)
 
-    async def async_step_camera(self, user_input=None):
-        if self._login is None:
-            return self.async_abort(reason="incomplete_session")
-        choices = [
-            SelectOptionDict(value=item.device_id, label=item.name)
-            for item in self._login.cameras
-        ]
-        if user_input is not None:
-            selected = next(
-                item for item in self._login.cameras if item.device_id == user_input[CONF_CAMERA_ID]
-            )
-            await self.async_set_unique_id(self._login.uid)
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=selected.name,
-                data={
-                    CONF_USERNAME: self._login.username,
-                    CONF_COUNTRY_CODE: self._login.country_code,
-                    CONF_APPLICATION: self._login.application,
-                    CONF_SID: self._login.sid,
-                    CONF_ECODE: self._login.ecode,
-                    CONF_UID: self._login.uid,
-                    CONF_PARTNER: self._login.partner_identity,
-                    CONF_API_HOST: self._login.api_host,
-                    CONF_PHONE_DEVICE_ID: self._login.phone_device_id,
-                    CONF_CAMERA_ID: selected.device_id,
-                    CONF_CAMERA_NAME: selected.name,
-                    CONF_PRODUCT_ID: selected.product_id,
-                },
-            )
-        return self.async_show_form(
-            step_id="camera",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_CAMERA_ID): SelectSelector(
-                        SelectSelectorConfig(options=choices)
-                    )
-                }
-            ),
-        )
-
-    async def async_step_reauth(self, entry_data):
-        """Start reauthentication without retaining the submitted password."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
+    async def async_step_reauth(self, _entry_data):
         return await self.async_step_reauth_confirm()
 
     async def async_step_reconfigure(self, user_input=None):
-        """Allow a user-initiated session refresh from the config entry UI."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
         return await self.async_step_reauth_confirm(user_input)
 
     async def async_step_reauth_confirm(self, user_input=None):
-        """Replace only session and app-routing fields for the existing camera."""
-        if self._reauth_entry is None:
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        if entry is None:
             return self.async_abort(reason="incomplete_session")
         errors = {}
         if user_input is not None:
             try:
-                api = TuyaCameraApi(async_get_clientsession(self.hass))
-                login = await api.async_login(
-                    user_input[CONF_USERNAME],
-                    user_input[CONF_PASSWORD],
-                    user_input[CONF_COUNTRY_CODE].lstrip("+"),
-                    user_input[CONF_APPLICATION],
-                )
-                if login.uid != self._reauth_entry.data[CONF_UID]:
+                login = await self._login(user_input)
+            except Exception as err:  # noqa: BLE001 - UI boundary preserves secrets
+                errors["base"] = _flow_error(err)
+            else:
+                if login.uid != entry.data[CONF_UID] or login.application != entry.data[CONF_APPLICATION]:
                     return self.async_abort(reason="wrong_account")
-                updated = {
-                    **self._reauth_entry.data,
-                    CONF_USERNAME: login.username,
-                    CONF_COUNTRY_CODE: login.country_code,
-                    CONF_APPLICATION: login.application,
-                    CONF_SID: login.sid,
-                    CONF_ECODE: login.ecode,
-                    CONF_PARTNER: login.partner_identity,
-                    CONF_API_HOST: login.api_host,
-                    CONF_PHONE_DEVICE_ID: login.phone_device_id,
-                }
-                self.hass.config_entries.async_update_entry(
-                    self._reauth_entry, data=updated
-                )
-                await self.hass.config_entries.async_reload(
-                    self._reauth_entry.entry_id
-                )
-                return self.async_abort(reason="reauth_successful")
-            except Exception as error:  # noqa: BLE001 - config-flow boundary
-                errors["base"] = _flow_error(error)
-
+                if error := self._validate(login):
+                    errors["base"] = error
+                else:
+                    return self.async_update_reload_and_abort(entry, data=entry_data(login))
         return self.async_show_form(
-            step_id="reauth_confirm",
-            data_schema=_credentials_schema(
-                self._reauth_entry.data.get(CONF_USERNAME, ""),
-                self._reauth_entry.data.get(
-                    CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE
-                ),
-                self._reauth_entry.data.get(CONF_APPLICATION, DEFAULT_APPLICATION),
-            ),
-            errors=errors,
+            step_id="reauth_confirm", data_schema=_credentials_schema(entry.data), errors=errors,
         )

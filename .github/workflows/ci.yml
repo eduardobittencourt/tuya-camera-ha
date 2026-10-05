@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   secrets:
     runs-on: ubuntu-latest
@@ -19,10 +22,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-      - run: pip install aiohttp cryptography pytest ruff
-      - run: ruff check custom_components tuya-camera-bridge-addon/app tests
-      - run: pytest
+          python-version: "3.14"
+      - run: pip install '.[test]'
+      - run: ruff check custom_components tuya-camera-bridge-addon/app tests scripts
+      - run: pytest -m 'not media'
 
   go:
     runs-on: ubuntu-latest
@@ -30,13 +33,36 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.8"
           cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
       - working-directory: tuya-camera-bridge-addon/bridge
         run: |
           test -z "$(gofmt -l .)"
-          go test ./...
-          CGO_ENABLED=0 go build -o tuya-camera-bridge .
+          go test -race ./...
+      - run: python3 scripts/package_release.py --verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: managed-integration
+          path: dist/*
+
+  media:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install '.[test]'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: |
+          curl --fail --location --retry 3 \
+            https://github.com/bluenviron/mediamtx/releases/download/v1.21.1/mediamtx_v1.21.1_linux_amd64.tar.gz \
+            --output /tmp/mediamtx.tar.gz
+          tar -xzf /tmp/mediamtx.tar.gz -C /tmp mediamtx
+      - run: pytest -m media --timeout=90
+        env:
+          TEST_FFMPEG_BINARY: /usr/bin/ffmpeg
+          TEST_MEDIAMTX_BINARY: /tmp/mediamtx
 
   addon:
     runs-on: ubuntu-latest

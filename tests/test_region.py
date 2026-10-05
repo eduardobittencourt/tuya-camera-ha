@@ -1,14 +1,4 @@
-import sys
-from pathlib import Path
-from types import ModuleType
-
-package = ModuleType("custom_components.tuya_camera_bridge")
-package.__path__ = [
-    str(Path(__file__).parents[1] / "custom_components" / "tuya_camera_bridge")
-]
-sys.modules["custom_components.tuya_camera_bridge"] = package
-
-from custom_components.tuya_camera_bridge.region import endpoint_for_country_code  # noqa: E402
+from custom_components.tuya_camera_bridge.region import endpoint_for_country_code
 
 
 def test_brazil_routes_to_american_data_center():

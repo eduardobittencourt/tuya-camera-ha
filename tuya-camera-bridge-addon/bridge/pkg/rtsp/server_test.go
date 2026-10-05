@@ -1,6 +1,7 @@
 package rtsp
 
 import (
+	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/storage"
 	"net"
 	"strconv"
 	"syscall"
@@ -69,4 +70,22 @@ func TestReuseAddrAllowsImmediateRebind(t *testing.T) {
 		t.Fatalf("re-bind on port %d failed: %v", port, err)
 	}
 	ln2.Close()
+}
+
+func TestLoopbackEphemeralListener(t *testing.T) {
+	t.Chdir(t.TempDir())
+	sm, err := storage.NewStorageManager()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := NewRTSPServer(0, sm)
+	server.ListenHost = "127.0.0.1"
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+	address := server.listener.Addr().(*net.TCPAddr)
+	if !address.IP.IsLoopback() || server.GetPort() == 0 {
+		t.Fatalf("unsafe listener: %v", address)
+	}
 }

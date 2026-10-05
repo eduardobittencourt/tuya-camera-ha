@@ -8,7 +8,7 @@ import (
 	"github.com/eduardobittencourt/tuya-camera-ha/bridge/pkg/core"
 )
 
-const VERSION = "0.0.6"
+var VERSION = "0.3.0b1"
 
 func main() {
 	core.InitLogger()

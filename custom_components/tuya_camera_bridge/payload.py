@@ -11,11 +11,13 @@ from .const import (
     CONF_APPLICATION,
     CONF_CAMERA_ID,
     CONF_CAMERA_NAME,
+    CONF_CAMERAS,
     CONF_ECODE,
     CONF_PARTNER,
     CONF_PHONE_DEVICE_ID,
     CONF_PRODUCT_ID,
     CONF_SID,
+    CONF_TIMEZONE,
     DEFAULT_BRIDGE_PORT,
 )
 
@@ -35,6 +37,7 @@ def build_bridge_config(data: dict) -> dict:
     from .api import bridge_app_material
 
     app = bridge_app_material(data[CONF_APPLICATION])
+    cameras = data.get(CONF_CAMERAS) or [{"camera_id": data[CONF_CAMERA_ID], "camera_name": data[CONF_CAMERA_NAME], "product_id": data.get(CONF_PRODUCT_ID, "")}]
     return {
         **app,
         "sid": data[CONF_SID],
@@ -44,13 +47,8 @@ def build_bridge_config(data: dict) -> dict:
         "api_host": data[CONF_API_HOST],
         "talkback": False,
         "bridge_port": DEFAULT_BRIDGE_PORT,
-        "cameras": [
-            {
-                "camera_id": data[CONF_CAMERA_ID],
-                "camera_name": data[CONF_CAMERA_NAME],
-                "product_id": data.get(CONF_PRODUCT_ID, ""),
-            }
-        ],
+        "timezone": data.get(CONF_TIMEZONE, "UTC"),
+        "cameras": cameras,
     }
 
 

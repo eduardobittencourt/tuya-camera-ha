@@ -1,15 +1,6 @@
 import asyncio
-import sys
-from pathlib import Path
-from types import ModuleType
 
-package = ModuleType("custom_components.tuya_camera_bridge")
-package.__path__ = [
-    str(Path(__file__).parents[1] / "custom_components" / "tuya_camera_bridge")
-]
-sys.modules["custom_components.tuya_camera_bridge"] = package
-
-from custom_components.tuya_camera_bridge.api import TuyaCameraApi  # noqa: E402
+from custom_components.tuya_camera_bridge.api import TuyaCameraApi
 
 
 class FakeClient:
