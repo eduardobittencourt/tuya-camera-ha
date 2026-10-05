@@ -572,6 +572,11 @@ func (s *RTSPServer) generateSDP(camera *storage.CameraInfo, baseURL string) str
 	// Audio media description based on skill
 	if skill != nil && len(skill.Audios) > 0 {
 		audioInfo := skill.Audios[0]
+		if audioInfo.CodecType == 101 && !tuya.IsHEVC(skill, tuya.GetStreamType(skill, "hd")) {
+			// H.264 uses a negotiated WebRTC track, not raw PCM data-channel
+			// packets. Preserve the existing G.711 fallback for that path.
+			audioInfo.CodecType = 105
+		}
 
 		switch audioInfo.CodecType {
 		case 101: // Signed 16-bit PCM; the forwarder converts little to big endian.

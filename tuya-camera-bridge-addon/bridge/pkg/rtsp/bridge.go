@@ -222,7 +222,9 @@ func (wb *WebRTCBridge) Start() error {
 	// Determine stream settings
 	wb.streamType = tuya.GetStreamType(&skill, wb.resolution)
 	wb.isHEVC = tuya.IsHEVC(&skill, wb.streamType)
-	wb.rtpForwarder.SetAudioPCM16(len(skill.Audios) > 0 && skill.Audios[0].CodecType == 101)
+	// HEVC data-channel packets use the device's raw audio codec. Native
+	// WebRTC tracks negotiate G.711/Opus instead of transporting raw PCM.
+	wb.rtpForwarder.SetAudioPCM16(wb.isHEVC && len(skill.Audios) > 0 && skill.Audios[0].CodecType == 101)
 
 	core.Logger.Info().Msgf("Stream settings - Resolution: %s, Type: %d, HEVC: %v", wb.resolution, wb.streamType, wb.isHEVC)
 

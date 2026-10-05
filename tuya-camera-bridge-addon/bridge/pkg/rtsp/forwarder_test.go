@@ -137,8 +137,9 @@ func TestForwardPCM16UsesL16WithoutChangingSamplesOrDuration(t *testing.T) {
 func TestSDPDistinguishesPCMFromG711(t *testing.T) {
 	server := NewRTSPServer(0, nil)
 	for _, test := range []struct{ skill, want string }{
-		{`{"audios":[{"codecType":101,"sampleRate":8000,"channels":1}]}`, "a=rtpmap:97 L16/8000/1\r\n"},
-		{`{"audios":[{"codecType":101,"sampleRate":16000,"channels":2}]}`, "a=rtpmap:97 L16/16000/2\r\n"},
+		{`{"videos":[{"codecType":4,"streamType":2,"width":1920,"height":1080}],"audios":[{"codecType":101,"sampleRate":8000,"channels":1}]}`, "a=rtpmap:97 L16/8000/1\r\n"},
+		{`{"videos":[{"codecType":4,"streamType":2,"width":1920,"height":1080}],"audios":[{"codecType":101,"sampleRate":16000,"channels":2}]}`, "a=rtpmap:97 L16/16000/2\r\n"},
+		{`{"videos":[{"codecType":2,"streamType":2,"width":1920,"height":1080}],"audios":[{"codecType":101}]}`, "a=rtpmap:0 PCMU/8000\r\n"},
 		{`{"audios":[{"codecType":105}]}`, "a=rtpmap:0 PCMU/8000\r\n"},
 		{`{"audios":[{"codecType":106}]}`, "a=rtpmap:8 PCMA/8000\r\n"},
 	} {
