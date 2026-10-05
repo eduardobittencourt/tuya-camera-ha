@@ -68,7 +68,8 @@ class FfmpegRelay:
             # the default five-second FFmpeg input probe can consume that budget.
             process = await asyncio.create_subprocess_exec(
                 self.binary, "-hide_banner", "-loglevel", "error", "-nostdin", "-rtsp_transport", "tcp",
-                "-timeout", "35000000", "-analyzeduration", "1000000", "-probesize", "512000",
+                "-timeout", "35000000", "-allowed_media_types", "video", "-fpsprobesize", "0",
+                "-analyzeduration", "1000000", "-probesize", "512000",
                 "-i", self.source(), "-frames:v", "1", "-f", "image2pipe",
                 "-c:v", "mjpeg", "pipe:1", stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,

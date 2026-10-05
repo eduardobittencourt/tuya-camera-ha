@@ -37,11 +37,12 @@ integration reload gave three HTTP 500 responses at approximately 10.02,
 
 Home Assistant imposes a ten-second image-request deadline. FFmpeg's default
 input analysis adds latency to the Tuya signaling and first-frame wait. The
-snapshot command now bounds analysis to one second and 512,000 bytes, leaving
-more of the deadline for connection establishment. See the
+snapshot command now accepts only video and skips frame-rate sampling, which
+is unnecessary for a single image. Analysis is bounded to one second and
+512,000 bytes, leaving more of the deadline for connection establishment. See the
 [FFmpeg format options](https://ffmpeg.org/ffmpeg-formats.html#Format-Options).
 
-The candidate Python module was temporarily installed for diagnosis and Core
+An initial candidate Python module with the bounded probe was temporarily installed for diagnosis and Core
 was restarted to load it. Three subsequent cold cycles, each resetting the
 integration through its official reload API before requesting an image, returned
 valid JPEGs with HTTP 200 in 9.85, 5.96 and 6.00 seconds. These are observations

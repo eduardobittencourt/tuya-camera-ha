@@ -123,8 +123,22 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
             "-c:a", "pcm_mulaw", "-ar", "8000", "-rtsp_transport", "tcp", "-f", "rtsp", source,
             stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
         )
-        await asyncio.sleep(1)
-        assert publisher.returncode is None
+        # Wait for publisher registration without PLAY or consuming media.
+        # A fixed startup sleep can race encoder startup on busy CI runners.
+        async with asyncio.timeout(10):
+            while True:
+                assert publisher.returncode is None
+                reader, writer = await asyncio.open_connection("127.0.0.1", port)
+                try:
+                    writer.write(f"DESCRIBE {source} RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\n\r\n".encode())
+                    await writer.drain()
+                    response = await reader.readline()
+                finally:
+                    writer.close()
+                    await writer.wait_closed()
+                if response.startswith(b"RTSP/1.0 200"):
+                    break
+                await asyncio.sleep(.05)
         await relay.start()
         # A dashboard snapshot is the first media consumer after startup.
         # Home Assistant cancels image requests at its ten-second deadline.

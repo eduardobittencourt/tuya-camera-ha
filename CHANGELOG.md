@@ -2,6 +2,7 @@
 
 ## 0.3.1 — Faster snapshots after startup
 
+- Probe only video and skip frame-rate sampling for snapshots.
 - Bound FFmpeg snapshot input analysis to leave time for Tuya signaling within
   Home Assistant's ten-second image request deadline.
 - Test the first H.264/H.265 snapshot before opening any video consumer.
