@@ -7,7 +7,7 @@ the HACS default catalog are separate steps.
 ## Verify the candidate
 
 1. Keep versions aligned in `manifest.json`, `pyproject.toml`, the changelog and
-   `binary_manifest.json`. Review compatibility and security notes.
+   `bridge_checksums.json`. Review compatibility and security notes.
 2. Use Go 1.26.8 to run `scripts/package_release.py --verify`. An intentional Go
    change needs a newly generated and reviewed binary manifest first.
 3. Run `scripts/check_repository.py --archive dist/tuya_camera_bridge.zip`.

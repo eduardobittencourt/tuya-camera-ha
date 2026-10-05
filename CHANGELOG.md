@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 — HACS catalog manifest discovery
+
+- Rename the executable checksum file to `bridge_checksums.json` so the HACS
+  catalog finds exactly one integration manifest before running hassfest.
+- Add a repository check for ambiguous manifest discovery.
+- Rebuild both pinned executables with the aligned 0.3.2 version.
+- Preserve the snapshot changes and documented cold-start limitations in 0.3.1.
+
 ## 0.3.1 — Faster snapshots after startup
 
 - Probe only video and skip frame-rate sampling for snapshots.

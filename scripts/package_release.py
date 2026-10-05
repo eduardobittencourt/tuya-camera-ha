@@ -33,7 +33,7 @@ def main() -> None:
             env={**os.environ, "GOOS": "linux", "GOARCH": arch, "CGO_ENABLED": "0"}, check=True)
         hashes[name] = hashlib.sha256(target.read_bytes()).hexdigest()
     info = {"version": version, "sha256": hashes}
-    manifest_path = COMPONENT / "binary_manifest.json"
+    manifest_path = COMPONENT / "bridge_checksums.json"
     if args.verify:
         if json.loads(manifest_path.read_text()) != info:
             raise SystemExit("Bridge binaries differ from the pinned manifest; rebuild with Go 1.26.8")

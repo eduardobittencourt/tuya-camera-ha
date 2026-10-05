@@ -30,7 +30,7 @@ def architecture() -> str:
 
 
 def manifest() -> dict:
-    return json.loads(Path(__file__).with_name("binary_manifest.json").read_text())
+    return json.loads(Path(__file__).with_name("bridge_checksums.json").read_text())
 
 
 def valid_binary(path: Path, expected: str) -> bool:

@@ -49,11 +49,17 @@ def check_repository() -> dict:
                     f"Broken relative link in {path.relative_to(ROOT)}: {link}")
     manifest = json.loads((COMPONENT / "manifest.json").read_text())
     hacs = json.loads((ROOT / "hacs.json").read_text())
-    binary = json.loads((COMPONENT / "binary_manifest.json").read_text())
+    binary = json.loads((COMPONENT / "bridge_checksums.json").read_text())
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     require(manifest["version"] == project["version"] == binary["version"], "Release versions differ")
     integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / "manifest.json").exists()]
     require(integrations == [COMPONENT], "HACS repository must contain exactly one integration")
+    # hacs/default scans *manifest.json across the clone before running hassfest.
+    # Keep auxiliary JSON names outside that glob to avoid ambiguous discovery.
+    catalog_manifests = list((ROOT / "custom_components").rglob("*manifest.json"))
+    catalog_manifests += list((ROOT / "tuya-camera-bridge-addon").rglob("*manifest.json"))
+    require(catalog_manifests == [COMPONENT / "manifest.json"],
+            "HACS catalog discovery must find only the integration manifest")
     require(manifest["domain"] == COMPONENT.name, "Integration domain differs from its directory")
     require(hacs["zip_release"] and hacs["filename"] == "tuya_camera_bridge.zip",
             "HACS release ZIP configuration is incorrect")
@@ -88,7 +94,7 @@ def check_archive(path: Path, manifest: dict) -> None:
         for name, source in expected.items():
             require(archive.read(name) == source.read_bytes(), f"Archive content differs: {name}")
         require(json.loads(archive.read("manifest.json")) == manifest, "Archive manifest differs")
-    pins = json.loads((COMPONENT / "binary_manifest.json").read_text())["sha256"]
+    pins = json.loads((COMPONENT / "bridge_checksums.json").read_text())["sha256"]
     sums = "".join(f"{digest}  {name}\n" for name, digest in pins.items())
     require((path.parent / "SHA256SUMS").read_text() == sums, "Published checksums differ from pins")
     for name, digest in pins.items():

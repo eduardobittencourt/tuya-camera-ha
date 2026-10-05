@@ -34,7 +34,7 @@ PTZ, two-way audio, camera settings and interactive MFA/captcha are not supporte
 
 ## Install with HACS
 
-Published release: [0.3.1](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.1).
+Published release: [0.3.2](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.2).
 HACS installation and automatic bridge download have been verified on HA OS
 2026.9.4; see the [stable validation report](docs/validation-0.3.1.md) and
 [original beta validation](docs/validation-0.3.0b1.md).
@@ -47,7 +47,7 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
    repositories**, selecting **Integration**.
-2. Select the stable `0.3.1` release, download it and restart Home Assistant.
+2. Select the stable `0.3.2` release, download it and restart Home Assistant.
    Beta versions do not need to be enabled.
 3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
