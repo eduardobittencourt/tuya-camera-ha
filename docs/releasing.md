@@ -25,7 +25,8 @@ See [development commands](development.md) and the
 
 After the candidate is reviewed and merged, run **Release integration** on the
 exact intended commit. The workflow builds reproducible assets and creates or
-refreshes a **draft prerelease** for the manifest version. It refuses to replace
+refreshes a **draft release** for the manifest version (stable for `X.Y.Z`, prerelease for
+versions such as `X.Y.Zb1`). It refuses to replace
 a published release. Review the full target commit, notes and assets:
 
 - `tuya_camera_bridge.zip`
@@ -35,8 +36,8 @@ a published release. Review the full target commit, notes and assets:
 
 Publishing is a separate maintainer action. Never replace published executables
 or reuse a version for different code: the integration pins executable hashes.
-Use a new version and release for corrections. Beta users must enable prereleases
-in HACS. After publication, verify a clean install and an upgrade through HACS,
+Use a new version and release for corrections. Only beta releases require enabling prereleases
+in HACS. Stable releases use the normal download flow. After publication, verify a clean install and an upgrade through HACS,
 including automatic executable download, UI login, playback and removal.
 
 For 0.3.0b1, the first HACS download onto the existing beta installation and a

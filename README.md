@@ -26,7 +26,7 @@ cameras and manages the media bridge automatically.
 - H.264 passthrough; H.265 converted to H.264 at 720p / 15 fps for playback.
 - Setup through the UI: no separate add-on, ONVIF configuration or manual IDs.
 
-**This is a beta using Tuya's private mobile APIs.** Compatibility depends on
+**This integration uses Tuya's private mobile APIs.** Compatibility depends on
 camera model and firmware. Internet is required for Tuya authentication and
 signaling; media can travel directly or through TURN. This project does not
 promise offline/local-only operation or compatibility with every Tuya camera.
@@ -34,7 +34,7 @@ PTZ, two-way audio, camera settings and interactive MFA/captcha are not supporte
 
 ## Install with HACS
 
-Published beta: [0.3.0b1](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0b1).
+Published release: [0.3.0](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0).
 HACS installation and automatic bridge download have been verified on HA OS
 2026.9.4; see the [validation report](docs/validation-0.3.0b1.md).
 
@@ -46,8 +46,8 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
    repositories**, selecting **Integration**.
-2. Select a published release; enable beta versions for `0.3.0b1`. Download it
-   and restart Home Assistant.
+2. Select the stable `0.3.0` release, download it and restart Home Assistant.
+   Beta versions do not need to be enabled.
 3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
    and country calling code as the app (`55` for Brazil).

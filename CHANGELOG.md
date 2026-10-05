@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 — Stable HACS release
+
+- Publish the validated managed integration as a stable release installable
+  through HACS without enabling beta versions.
+- Preserve the media, authentication and process lifecycle behavior from 0.3.0b1.
+- Align integration, package and executable versions at 0.3.0 and rebuild both
+  Linux architectures with pinned SHA-256 checksums.
+- Let the release workflow distinguish stable versions from prereleases.
+
+Compatibility remains limited to the documented camera protocols and tested
+model. Tuya internet access is required; PTZ, two-way audio and interactive
+MFA/captcha remain unsupported.
+
 ## 0.3.0b1 — Managed integration beta
 
 - Configure all compatible cameras from a Tuya account in the Home Assistant UI.
