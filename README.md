@@ -124,6 +124,9 @@ and arm64 executables, their SHA-256 checksums and `tuya_camera_bridge.zip`.
 differ from the committed manifest. After changing Go code, regenerate the
 manifest before releasing. The release workflow creates a **draft** for review.
 
+The intended HEVC/PCM camera has also been tested on HA OS; see the
+[beta validation report](docs/validation-0.3.0b1.md) for results and limits.
+
 Automated tests do not replace verification with the intended Tuya camera:
 check mobile login, wake-up, live video/audio, source/network interruption,
 restarts and sustained resource usage before relying on a beta.
