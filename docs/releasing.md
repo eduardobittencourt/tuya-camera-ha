@@ -39,8 +39,10 @@ Use a new version and release for corrections. Beta users must enable prerelease
 in HACS. After publication, verify a clean install and an upgrade through HACS,
 including automatic executable download, UI login, playback and removal.
 
-The installed development beta has live-media validation; a clean public HACS
-installation remains a post-publication check because draft assets are private.
+For 0.3.0b1, the first HACS download onto the existing beta installation and a
+fresh automatic bridge download were verified after publication. The existing
+account and camera entity were preserved. See the [validation report](validation-0.3.0b1.md).
+This migration check does not represent a blank HA installation or a new account.
 
 ## HACS catalog
 

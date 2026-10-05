@@ -34,6 +34,10 @@ PTZ, two-way audio, camera settings and interactive MFA/captcha are not supporte
 
 ## Install with HACS
 
+Published beta: [0.3.0b1](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0b1).
+HACS installation and automatic bridge download have been verified on HA OS
+2026.9.4; see the [validation report](docs/validation-0.3.0b1.md).
+
 Requires **Home Assistant 2026.9+ on Linux amd64 or AArch64**, an existing HACS
 installation, and FFmpeg. Home Assistant OS and Container include FFmpeg;
 other Linux installations must provide a build with H.264/AAC encoding support.

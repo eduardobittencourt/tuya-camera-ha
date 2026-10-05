@@ -32,6 +32,10 @@ não estão implementados.
 
 ## Instalação
 
+A beta [0.3.0b1 já está publicada](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0b1).
+A instalação pelo HACS e o download automático do bridge foram validados no
+HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior.
+
 É necessário ter **HA 2026.9 ou mais recente**, Linux **amd64 ou ARM64**, HACS e
 FFmpeg. HA OS e Container já incluem FFmpeg. Em uma instalação Linux própria,
 o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
