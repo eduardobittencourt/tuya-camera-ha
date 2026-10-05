@@ -22,7 +22,7 @@ busca as câmeras e instala e gerencia o bridge de vídeo automaticamente.
 Tudo é configurado pela interface. Não é necessário instalar outro add-on,
 configurar ONVIF, copiar IDs ou editar YAML.
 
-**Ainda é uma beta.** Usamos APIs privadas da Tuya, que podem mudar.
+**Usamos APIs privadas da Tuya, que podem mudar.**
 Compatibilidade depende do modelo e do firmware. A autenticação e a sinalização
 precisam de internet; o vídeo pode usar conexão direta ou TURN. Não prometemos
 funcionamento totalmente offline nem suporte a toda câmera Tuya.
@@ -32,7 +32,7 @@ não estão implementados.
 
 ## Instalação
 
-A beta [0.3.0b1 já está publicada](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0b1).
+A release estável [0.3.0](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0) permite instalar sem habilitar versões beta.
 A instalação pelo HACS e o download automático do bridge foram validados no
 HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior.
 
@@ -42,7 +42,7 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
 1. No HACS, abra **Repositórios personalizados**.
 2. Adicione `https://github.com/eduardobittencourt/tuya-camera-ha` como **Integração**.
-3. Escolha uma release publicada. Para `0.3.0b1`, habilite versões beta.
+3. Escolha a release estável `0.3.0`; não é preciso habilitar versões beta.
 4. Baixe a integração e reinicie o HA.
 5. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
    procure **Tuya Camera Bridge**.

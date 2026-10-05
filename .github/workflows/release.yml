@@ -23,13 +23,17 @@ jobs:
         run: |
           version=$(python3 -c 'import json; print(json.load(open("custom_components/tuya_camera_bridge/manifest.json"))["version"])')
           tag="v${version}"
+          prerelease=true
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            prerelease=false
+          fi
           if gh release view "${tag}" --json isDraft > /tmp/tuya-release.json; then
             python3 -c 'import json; assert json.load(open("/tmp/tuya-release.json"))["isDraft"], "Refusing to overwrite a published release"'
-            gh release edit "${tag}" --draft --prerelease --target "${GITHUB_SHA}" \
+            gh release edit "${tag}" --draft --prerelease="${prerelease}" --target "${GITHUB_SHA}" \
               --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
             gh release upload "${tag}" dist/* --clobber
           else
             gh release create "${tag}" dist/* \
-              --draft --prerelease --target "${GITHUB_SHA}" \
+              --draft --prerelease="${prerelease}" --target "${GITHUB_SHA}" \
               --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
           fi

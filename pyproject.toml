@@ -1,6 +1,6 @@
 [project]
 name = "tuya-camera-ha"
-version = "0.3.0b1"
+version = "0.3.0"
 description = "Tuya mobile WebRTC camera integration and bridge for Home Assistant"
 requires-python = ">=3.14"
 
