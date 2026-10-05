@@ -1,7 +1,7 @@
 {
-  "version": "0.3.0",
+  "version": "0.3.1",
   "sha256": {
-    "tuya-camera-bridge-linux-amd64": "3ed9a3072daaa6593dc2ec89c9b15013c3bf89bfc0033cfec382c7cfbb27a041",
-    "tuya-camera-bridge-linux-arm64": "5475e0f421ecd75c039caa915d7e948500bcfb2fd181981ef1e6642eb05bedb8"
+    "tuya-camera-bridge-linux-amd64": "8d58936ec0304fe31aae1ac055cbf0f29e28c620533287a9bed9df1d69f01bd9",
+    "tuya-camera-bridge-linux-arm64": "53badfd2a3c14f72dac798ae049a2cf61678841060ecab4eb803b34f0bda1748"
   }
 }

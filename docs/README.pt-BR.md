@@ -32,9 +32,10 @@ não estão implementados.
 
 ## Instalação
 
-A release estável [0.3.0](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.0) permite instalar sem habilitar versões beta.
+A release estável [0.3.1](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.1) permite instalar sem habilitar versões beta.
 A instalação pelo HACS e o download automático do bridge foram validados no
-HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior.
+HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
+[validação da release estável](validation-0.3.1.md).
 
 É necessário ter **HA 2026.9 ou mais recente**, Linux **amd64 ou ARM64**, HACS e
 FFmpeg. HA OS e Container já incluem FFmpeg. Em uma instalação Linux própria,
@@ -42,7 +43,7 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
 1. No HACS, abra **Repositórios personalizados**.
 2. Adicione `https://github.com/eduardobittencourt/tuya-camera-ha` como **Integração**.
-3. Escolha a release estável `0.3.0`; não é preciso habilitar versões beta.
+3. Escolha a release estável `0.3.1`; não é preciso habilitar versões beta.
 4. Baixe a integração e reinicie o HA.
 5. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
    procure **Tuya Camera Bridge**.

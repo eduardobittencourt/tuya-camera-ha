@@ -64,9 +64,12 @@ class FfmpegRelay:
     async def snapshot(self) -> bytes | None:
         """Return a fresh frame; an old image must not hide a disconnected camera."""
         async with self._snapshot_lock:
+            # Leave time for Tuya signaling within HA's ten-second image deadline;
+            # the default five-second FFmpeg input probe can consume that budget.
             process = await asyncio.create_subprocess_exec(
                 self.binary, "-hide_banner", "-loglevel", "error", "-nostdin", "-rtsp_transport", "tcp",
-                "-timeout", "35000000", "-i", self.source(), "-frames:v", "1", "-f", "image2pipe",
+                "-timeout", "35000000", "-analyzeduration", "1000000", "-probesize", "512000",
+                "-i", self.source(), "-frames:v", "1", "-f", "image2pipe",
                 "-c:v", "mjpeg", "pipe:1", stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
             )

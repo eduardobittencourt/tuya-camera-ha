@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 — Faster snapshots after startup
+
+- Bound FFmpeg snapshot input analysis to leave time for Tuya signaling within
+  Home Assistant's ten-second image request deadline.
+- Test the first H.264/H.265 snapshot before opening any video consumer.
+- Rebuild both checksum-pinned executables with the aligned 0.3.1 version.
+
 ## 0.3.0 — Stable HACS release
 
 - Publish the validated managed integration as a stable release installable

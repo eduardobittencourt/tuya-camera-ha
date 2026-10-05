@@ -126,6 +126,11 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
         await asyncio.sleep(1)
         assert publisher.returncode is None
         await relay.start()
+        # A dashboard snapshot is the first media consumer after startup.
+        # Home Assistant cancels image requests at its ten-second deadline.
+        async with asyncio.timeout(10):
+            cold_image = await relay.snapshot()
+        assert cold_image and cold_image.startswith(b"\xff\xd8")
         await asyncio.to_thread(inspect_stream, relay.url)
         assert await async_setup_component(hass, "stream", {})
         stream = create_stream(hass, relay.url, {}, DynamicStreamSettings())

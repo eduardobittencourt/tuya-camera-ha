@@ -22,6 +22,7 @@ REQUIRED = (
     ".github/workflows/validate.yml", "docs/README.pt-BR.md", "docs/installation.md",
     "docs/compatibility.md", "docs/troubleshooting.md", "docs/architecture.md",
     "docs/development.md", "docs/releasing.md", "docs/validation-0.3.0b1.md",
+    "docs/validation-0.3.1.md",
 )
 
 
