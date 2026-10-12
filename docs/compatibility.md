@@ -17,8 +17,9 @@ used Tuya Smart: login through the Positivo-branded app is not implemented.
 
 This is a battery-powered model, but the test did not record its power state or
 measure battery endurance, long idle/wake cycles or continuous day-long operation.
-Live viewing can keep a battery camera awake and affect endurance. No battery,
-motion, PTZ or talkback controls are exposed by this integration.
+Live viewing can keep a battery camera awake and affect endurance. Version 0.3.3+ includes [LAN controls](local-controls.md), but the tested unit rejected
+the local DP connection, so those controls remain unavailable. PTZ and talkback
+are not exposed.
 
 See [the validation report](validation-0.3.0b1.md) for measured results and
 untested failure paths. H.264 and H.265 also have synthetic media coverage;
@@ -33,7 +34,8 @@ synthetic fixtures are not additional verified retail models.
 | Receive audio | Implemented G.711 paths and 16-bit PCM on the HEVC data-channel path; the real device tested used PCM |
 | Snapshots | Fresh JPEG capture through FFmpeg |
 | HLS / WebRTC | Native HA stream / go2rtc provider |
-| PTZ, settings, two-way audio | Not exposed |
+| Camera settings/telemetry | LAN only, schema-dependent; unavailable on the tested Positivo unit |
+| PTZ, two-way audio | Not exposed |
 | MFA / interactive captcha | Not implemented |
 | Offline operation | Not established; Tuya authentication/signaling require internet |
 

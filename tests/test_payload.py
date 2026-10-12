@@ -59,3 +59,15 @@ def test_bridge_config_carries_the_selected_mobile_app_profile():
             "product_id": "product",
         }
     ]
+
+
+def test_lan_credentials_do_not_change_the_go_or_addon_contract():
+    from custom_components.tuya_camera_bridge.config_flow import entry_data
+
+    from .test_config_flow import LOGIN
+
+    data = entry_data(LOGIN)
+    data["cameras"][0]["local"] = {"local_key": "private-key", "schema": [{"id": 108}]}
+    config = build_bridge_config(data)
+    assert all(set(camera) == {"camera_id", "camera_name", "product_id"} for camera in config["cameras"])
+    assert "private-key" not in str(config)

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.3 — LAN entity setup fixes
+
+- Fix local sensor registration: platform-specific sensor attributes no longer
+  fall back to an incompatible generic entity description.
+- Include schema-driven LAN controls and telemetry previously tested as a local
+  development patch. Existing account and camera identities are preserved.
+- Test native HA registration and values for battery, power source, SD status
+  and scaled formatting progress alongside local switch/select/number services.
+- Keep LAN commands and telemetry local, with no cloud fallback. Cameras that
+  reject the local protocol still expose unavailable controls.
+- Rebuild both checksum-pinned executables with the aligned 0.3.3 version.
+
+A camera that is offline or has a depleted battery must be brought online before
+video can resume. This release does not change camera wake-up or media signaling.
+
 ## 0.3.2 — HACS catalog manifest discovery
 
 - Rename the executable checksum file to `bridge_checksums.json` so the HACS

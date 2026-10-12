@@ -41,5 +41,124 @@
       "incomplete_session": "A sessão Tuya está incompleta",
       "reconfigure_successful": "A conta Tuya foi reconectada"
     }
+  },
+  "entity": {
+    "switch": {
+      "basic_indicator": {
+        "name": "LED indicador"
+      },
+      "basic_flip": {
+        "name": "Inverter imagem"
+      },
+      "basic_osd": {
+        "name": "Data e hora na imagem"
+      },
+      "basic_private": {
+        "name": "Modo privacidade"
+      },
+      "basic_wdr": {
+        "name": "Ampla faixa dinâmica"
+      },
+      "motion_switch": {
+        "name": "Detecção de movimento"
+      },
+      "ipc_pir_switch": {
+        "name": "Detecção por PIR"
+      },
+      "humanoid_filter": {
+        "name": "Detecção de pessoas"
+      },
+      "record_switch": {
+        "name": "Gravação"
+      },
+      "siren_switch": {
+        "name": "Sirene"
+      },
+      "decibel_switch": {
+        "name": "Detecção de som"
+      },
+      "motion_tracking": {
+        "name": "Rastreamento de movimento"
+      },
+      "motion_area_switch": {
+        "name": "Área de detecção"
+      },
+      "ipc_alarm_ind": {
+        "name": "Envio de alarmes"
+      },
+      "ipc_privacy_zone": {
+        "name": "Zonas de privacidade"
+      },
+      "wireless_awake": {
+        "name": "Manter acordada"
+      }
+    },
+    "select": {
+      "basic_nightvision": {
+        "name": "Visão noturna",
+        "state": {
+          "auto": "Automático",
+          "off": "Desligado",
+          "on": "Ligado"
+        }
+      },
+      "motion_sensitivity": {
+        "name": "Sensibilidade de movimento"
+      },
+      "decibel_sensitivity": {
+        "name": "Sensibilidade de som"
+      },
+      "record_mode": {
+        "name": "Modo de gravação"
+      },
+      "basic_anti_flicker": {
+        "name": "Anticintilação"
+      },
+      "ipc_work_mode": {
+        "name": "Modo de funcionamento"
+      },
+      "ipc_light_mode": {
+        "name": "Modo da luz"
+      }
+    },
+    "number": {
+      "basic_device_volume": {
+        "name": "Volume"
+      },
+      "ipc_pir_sensitivity": {
+        "name": "Sensibilidade do PIR"
+      },
+      "wireless_lowpower": {
+        "name": "Limite de bateria baixa"
+      },
+      "motion_interval": {
+        "name": "Intervalo dos alarmes de movimento"
+      }
+    },
+    "sensor": {
+      "wireless_electricity": {
+        "name": "Bateria"
+      },
+      "wireless_powermode": {
+        "name": "Fonte de alimentação"
+      },
+      "sd_status": {
+        "name": "Estado do cartão SD"
+      },
+      "sd_format_state": {
+        "name": "Progresso da formatação do SD"
+      }
+    },
+    "binary_sensor": {
+      "lan_connection": {
+        "name": "Conexão LAN"
+      },
+      "movement_detect_pic": {
+        "name": "Movimento"
+      },
+      "decibel_upload": {
+        "name": "Som"
+      }
+    }
   }
 }

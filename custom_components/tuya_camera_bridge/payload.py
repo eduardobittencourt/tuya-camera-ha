@@ -48,7 +48,8 @@ def build_bridge_config(data: dict) -> dict:
         "talkback": False,
         "bridge_port": DEFAULT_BRIDGE_PORT,
         "timezone": data.get(CONF_TIMEZONE, "UTC"),
-        "cameras": cameras,
+        "cameras": [{key: camera[key] for key in ("camera_id", "camera_name", "product_id") if key in camera}
+                    for camera in cameras],
     }
 
 

@@ -41,6 +41,12 @@ Snapshots request current video rather than returning an indefinitely cached JPE
 
 ## Network and trust
 
+Version 0.3.3+ also owns independent [LAN DP connections](local-controls.md)
+for camera settings and telemetry. The local key and schema are provisioned once
+through account setup and persisted privately by HA. Runtime reads, commands,
+reconnection and event handling never fall back to cloud APIs. These connections
+do not depend on media playback or bridge/session availability.
+
 Tuya authentication, discovery and signaling need internet access. Media can use
 a direct WebRTC path or a TURN relay depending on the camera and network. This
 project has not established fully offline operation.

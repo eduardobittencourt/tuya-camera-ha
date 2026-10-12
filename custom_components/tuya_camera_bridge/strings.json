@@ -41,5 +41,124 @@
       "incomplete_session": "The Tuya session is incomplete",
       "reconfigure_successful": "The Tuya account was reconnected"
     }
+  },
+  "entity": {
+    "switch": {
+      "basic_indicator": {
+        "name": "Indicator light"
+      },
+      "basic_flip": {
+        "name": "Flip image"
+      },
+      "basic_osd": {
+        "name": "Timestamp overlay"
+      },
+      "basic_private": {
+        "name": "Privacy mode"
+      },
+      "basic_wdr": {
+        "name": "Wide dynamic range"
+      },
+      "motion_switch": {
+        "name": "Motion detection"
+      },
+      "ipc_pir_switch": {
+        "name": "PIR detection"
+      },
+      "humanoid_filter": {
+        "name": "Person detection"
+      },
+      "record_switch": {
+        "name": "Recording"
+      },
+      "siren_switch": {
+        "name": "Siren"
+      },
+      "decibel_switch": {
+        "name": "Sound detection"
+      },
+      "motion_tracking": {
+        "name": "Motion tracking"
+      },
+      "motion_area_switch": {
+        "name": "Detection area"
+      },
+      "ipc_alarm_ind": {
+        "name": "Alarm reporting"
+      },
+      "ipc_privacy_zone": {
+        "name": "Privacy zones"
+      },
+      "wireless_awake": {
+        "name": "Keep awake"
+      }
+    },
+    "select": {
+      "basic_nightvision": {
+        "name": "Night vision",
+        "state": {
+          "auto": "Automatic",
+          "off": "Off",
+          "on": "On"
+        }
+      },
+      "motion_sensitivity": {
+        "name": "Motion sensitivity"
+      },
+      "decibel_sensitivity": {
+        "name": "Sound sensitivity"
+      },
+      "record_mode": {
+        "name": "Recording mode"
+      },
+      "basic_anti_flicker": {
+        "name": "Anti-flicker"
+      },
+      "ipc_work_mode": {
+        "name": "Working mode"
+      },
+      "ipc_light_mode": {
+        "name": "Light mode"
+      }
+    },
+    "number": {
+      "basic_device_volume": {
+        "name": "Volume"
+      },
+      "ipc_pir_sensitivity": {
+        "name": "PIR sensitivity"
+      },
+      "wireless_lowpower": {
+        "name": "Low battery threshold"
+      },
+      "motion_interval": {
+        "name": "Motion alarm interval"
+      }
+    },
+    "sensor": {
+      "wireless_electricity": {
+        "name": "Battery"
+      },
+      "wireless_powermode": {
+        "name": "Power source"
+      },
+      "sd_status": {
+        "name": "SD card status"
+      },
+      "sd_format_state": {
+        "name": "SD formatting progress"
+      }
+    },
+    "binary_sensor": {
+      "lan_connection": {
+        "name": "LAN connection"
+      },
+      "movement_detect_pic": {
+        "name": "Motion"
+      },
+      "decibel_upload": {
+        "name": "Sound"
+      }
+    }
   }
 }

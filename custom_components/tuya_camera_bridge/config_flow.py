@@ -65,7 +65,9 @@ def entry_data(login: LoginResult) -> dict:
         CONF_SID: login.sid, CONF_ECODE: login.ecode, CONF_UID: login.uid,
         CONF_PARTNER: login.partner_identity, CONF_API_HOST: login.api_host,
         CONF_PHONE_DEVICE_ID: login.phone_device_id, CONF_TIMEZONE: login.timezone,
-        CONF_CAMERAS: [{"camera_id": item.device_id, "camera_name": item.name, "product_id": item.product_id}
+        "local_controls_initialized": True,
+        CONF_CAMERAS: [{"camera_id": item.device_id, "camera_name": item.name, "product_id": item.product_id,
+                        **({"local": item.local_config} if item.local_config else {})}
                        for item in login.cameras],
     }
 
