@@ -13,6 +13,9 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
         "bridge_version": (await hass.async_add_executor_job(manifest))["version"],
         "bridge_ready": runtime.bridge.ready,
         "reauth_required": runtime.bridge.auth_required,
+        "local_controls": [{"status": local.status, "connected": local.connected,
+                            "supported_functions": sorted(local.schema)}
+                           for local in runtime.local_cameras.values()],
         "cameras": [
             {"connection_status": runtime.bridge.camera_status.get(camera_id, {}).get("state", "standby"),
              "active_media_processes": relay.active_processes}

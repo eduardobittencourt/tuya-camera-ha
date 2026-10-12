@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from homeassistant.components.ffmpeg import get_ffmpeg_manager
@@ -15,14 +15,17 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
+from .api import TuyaCameraApi
 from .binary import BinaryError, ensure_binary
 from .bridge import BridgeAuthenticationError, BridgeError, ManagedBridge
 from .const import CONF_CAMERAS, DOMAIN
+from .lan import LocalCamera
 from .payload import bridge_config_filename, build_bridge_config
 from .transcoder import FfmpegRelay
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.CAMERA]
+PLATFORMS = [Platform.CAMERA, Platform.SWITCH, Platform.SELECT, Platform.NUMBER,
+             Platform.SENSOR, Platform.BINARY_SENSOR]
 
 
 def status_signal(entry_id: str) -> str:
@@ -33,13 +36,19 @@ def status_signal(entry_id: str) -> str:
 class RuntimeData:
     bridge: ManagedBridge
     relays: dict[str, FfmpegRelay]
+    local_cameras: dict[str, LocalCamera] = field(default_factory=dict)
 
     async def stop(self) -> None:
+        await asyncio.gather(*(camera.stop() for camera in self.local_cameras.values()))
         await asyncio.gather(*(relay.stop() for relay in self.relays.values()))
         await self.bridge.stop()
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if not entry.data.get("local_controls_initialized"):
+        cameras = await TuyaCameraApi(async_get_clientsession(hass)).async_prepare_local_controls(entry.data)
+        hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_CAMERAS: cameras,
+                                                          "local_controls_initialized": True})
     directory = Path(hass.config.path(".storage", DOMAIN))
     try:
         binary = await ensure_binary(async_get_clientsession(hass), directory / "bin")
@@ -71,6 +80,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await relay.start()
             runtime.relays[camera_id] = relay
         entry.runtime_data = runtime
+        for camera in entry.data[CONF_CAMERAS]:
+            local = LocalCamera(hass, entry.entry_id, camera)
+            runtime.local_cameras[camera["camera_id"]] = local
+            await local.start()
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except BridgeAuthenticationError as err:
         await runtime.stop()
