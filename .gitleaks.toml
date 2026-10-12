@@ -3,6 +3,13 @@ title = "Tuya Camera Bridge secret scanning"
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Versioned public Android application identity bundled by tuya-mobile"
 paths = ['''custom_components/tuya_camera_bridge/vendor/tuya_mobile/profiles\.py''']
+
+[[allowlists]]
+description = "Exact synthetic AES key used only by the LAN test camera"
+condition = "AND"
+paths = ['''^tests/test_(api|lan)\.py$''']
+regexTarget = "secret"
+regexes = ['''^test-lan-key1234$''']
