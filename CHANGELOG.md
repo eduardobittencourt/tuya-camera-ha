@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.3.4 — Native LAN media and confirmed battery-camera controls
+
+- Add native protocol-3.3 LAN signaling and AES/KCP media, attempting LAN first
+  and using cloud wake when the camera is sleeping. Cloud wake remains required;
+  LAN talkback and fully offline daily operation are not validated.
+- Share one Go signaling/DP socket with Python controls through private loopback
+  IPC. Omit DP refresh queries on this media path because they interrupt the
+  tested firmware; retain spontaneous reports and fresh command confirmations.
+- Correct the local H.264 picture clock and PCM16 mono audio rate to 8 kHz;
+  validate continuous video/audio, HLS, snapshots and native HA controls before
+  and after integration reload, restoring original settings after each test.
+- On the TinyTuya control path, request readable scalar DPs once per connection
+  and receive their delayed reports, restoring night vision/PIR discovery.
+- Drain initial LAN reports before the first battery command, use the account
+  UID in CONTROL, and wait for its report without a second refresh overtaking it.
+- Keep unrelated restored observations from blocking a battery command while
+  still requiring a current report for the requested setting and confirmation.
+- Retry an unanswered initial battery-setting read once before sending CONTROL,
+  within the existing command deadline and without polling during standby.
+- Remove the standalone add-on, Docker image, ONVIF gateway and independent CLI;
+  move the Go executable into `bridge/` with stdin-only configuration, loopback
+  listeners and an in-memory camera registry.
+
+- Discover settings and telemetry only after valid camera reports, disable
+  legacy unconfirmed entities while preserving their IDs and user choices, and
+  restore timestamped settings as well as sensors during battery standby.
+- Disable battery-camera motion/sound entities by default because sleeping
+  cameras cannot provide continuous LAN events.
+- Share on-demand LAN telemetry sessions with snapshots/video on battery cameras,
+  receive asynchronous initial states and command confirmations, and close the
+  socket after media use without background polling during standby.
+- Retain timestamped last observations while asleep and restore telemetry sensors
+  through Home Assistant; serialize and coalesce command-triggered media wakeups.
+
+- Bind the managed talkback UDP RTP/RTCP listeners to loopback, including after
+  stream reconnection.
+- Import TinyTuya's discovery scanner explicitly so discovery does not depend
+  on another integration having imported that submodule first.
+
+## 0.3.3 — LAN entity setup fixes
+
+- Fix local sensor registration: platform-specific sensor attributes no longer
+  fall back to an incompatible generic entity description.
+- Include schema-driven LAN controls and telemetry previously tested as a local
+  development patch. Existing account and camera identities are preserved.
+- Test native HA registration and values for battery, power source, SD status
+  and scaled formatting progress alongside local switch/select/number services.
+- Keep LAN commands and telemetry local, with no cloud fallback. Cameras that
+  reject the local protocol still expose unavailable controls.
+- Rebuild both checksum-pinned executables with the aligned 0.3.3 version.
+
+A camera that is offline or has a depleted battery must be brought online before
+video can resume. This release does not change camera wake-up or media signaling.
+
 ## 0.3.2 — HACS catalog manifest discovery
 
 - Rename the executable checksum file to `bridge_checksums.json` so the HACS

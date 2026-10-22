@@ -21,8 +21,8 @@ Use synthetic media for reproducible tests. Security reports belong in the
 1. Fork the repository and create a branch from `main`.
 2. Follow the [development guide](docs/development.md) and repository [AGENTS.md](AGENTS.md).
 3. Keep UI configuration automatic. Users should not need keys, device IDs or YAML.
-4. Add regression coverage when changing behavior. Shared Go changes must keep
-   both the managed integration and the compatibility add-on working.
+4. Add regression coverage when changing behavior. Update the Python/Go
+   contract together when changing the managed executable.
 5. Run the checks appropriate to your change and describe the results in the PR.
 
 Changes to Go source require deterministic builds with Go 1.26.8 and updated

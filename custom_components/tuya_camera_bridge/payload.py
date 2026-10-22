@@ -1,10 +1,5 @@
-"""Bridge configuration contract shared with the add-on."""
+"""Private stdin configuration contract for the managed Go executable."""
 from __future__ import annotations
-
-import json
-import os
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 from .const import (
     CONF_API_HOST,
@@ -18,7 +13,6 @@ from .const import (
     CONF_PRODUCT_ID,
     CONF_SID,
     CONF_TIMEZONE,
-    DEFAULT_BRIDGE_PORT,
 )
 
 PREFIX = "tuya_camera_bridge_"
@@ -41,36 +35,26 @@ def build_bridge_config(data: dict) -> dict:
     return {
         **app,
         "sid": data[CONF_SID],
+        "uid": data.get("uid", ""),
         "ecode": data[CONF_ECODE],
         "partner": data[CONF_PARTNER],
         "device_id": data[CONF_PHONE_DEVICE_ID],
         "api_host": data[CONF_API_HOST],
         "talkback": False,
-        "bridge_port": DEFAULT_BRIDGE_PORT,
+        "bridge_port": 0,
         "timezone": data.get(CONF_TIMEZONE, "UTC"),
-        "cameras": cameras,
+        "cameras": [_media_camera(camera) for camera in cameras],
     }
 
 
-def write_bridge_config_file(path: Path, config: dict) -> None:
-    payload = json.dumps(config, separators=(",", ":"))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path: Path | None = None
-    try:
-        with NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            delete=False,
-        ) as stream:
-            temporary_path = Path(stream.name)
-            os.fchmod(stream.fileno(), 0o600)
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+def _media_camera(camera: dict) -> dict:
+    result = {key: camera[key] for key in ("camera_id", "camera_name", "product_id") if key in camera}
+    local = camera.get("local") or {}
+    # Only the verified protocol is enabled. No raw schema or DP values cross
+    # this boundary. Session material travels on the managed process's stdin.
+    if local.get("media_password") and local.get("version") == "3.3" and local.get("host"):
+        result["local_media"] = {key: local[key] for key in
+                                 ("local_key", "media_password", "host", "mac") if key in local}
+        result["local_media"]["dp_ids"] = [int(item["id"]) for item in local.get("schema", [])
+                                               if item.get("property", {}).get("type") in ("bool", "enum", "value")]
+    return result

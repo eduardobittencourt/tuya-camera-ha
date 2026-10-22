@@ -16,6 +16,7 @@ def bridge_executable(tmp_path):
     path = tmp_path / "bridge"
     path.write_text(f"#!{sys.executable}\n" + '''
 import json, sys, time
+assert len(sys.argv) == 1, "The managed executable accepts only stdin configuration"
 config = json.load(sys.stdin)
 if config.get("stall"):
     time.sleep(60)

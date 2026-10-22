@@ -60,6 +60,8 @@ class TuyaBridgeCamera(Camera):
         status = self._runtime.bridge.camera_status.get(self._camera_id, {})
         last_video = status.get("last_video")
         return {
+            "media_transport": self._runtime.bridge.sources.get(self._camera_id, {}).get("transport", "cloud"),
+            "cloud_wakes": status.get("cloud_wakes", 0),
             "connection_status": status.get("state", "standby") if self.available else "disconnected",
             "last_video_received": datetime.fromtimestamp(last_video, UTC).isoformat() if last_video else None,
             "active_media_processes": self._runtime.relays[self._camera_id].active_processes,

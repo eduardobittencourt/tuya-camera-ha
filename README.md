@@ -25,16 +25,19 @@ cameras and manages the media bridge automatically.
 - A bridge installed with checksum verification and restarted after a crash.
 - H.264 passthrough; H.265 converted to H.264 at 720p / 15 fps for playback.
 - Setup through the UI: no separate add-on, ONVIF configuration or manual IDs.
+- Schema-driven [LAN camera controls](docs/local-controls.md)
+  and telemetry on models that accept Tuya's local control protocol.
 
 **This integration uses Tuya's private mobile APIs.** Compatibility depends on
 camera model and firmware. Internet is required for Tuya authentication and
 signaling; media can travel directly or through TURN. This project does not
 promise offline/local-only operation or compatibility with every Tuya camera.
-PTZ, two-way audio, camera settings and interactive MFA/captcha are not supported.
+PTZ, two-way audio and interactive MFA/captcha are not supported. Local controls
+do not make the existing media bridge fully offline.
 
 ## Install with HACS
 
-Published release: [0.3.2](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.2).
+Published release: [0.3.3](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.3).
 HACS installation and automatic bridge download have been verified on HA OS
 2026.9.4; see the [stable validation report](docs/validation-0.3.1.md) and
 [original beta validation](docs/validation-0.3.0b1.md).
@@ -47,7 +50,7 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
    repositories**, selecting **Integration**.
-2. Select the stable `0.3.2` release, download it and restart Home Assistant.
+2. Select the stable `0.3.3` release, download it and restart Home Assistant.
    Beta versions do not need to be enabled.
 3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
@@ -90,7 +93,7 @@ with roughly 65–74% of one CPU core. This excludes the rest of HA and is not a
 guarantee for other cameras or multiple viewers.
 
 Read [architecture](docs/architecture.md) for process lifecycle and transport
-choices. The standalone add-on remains a [legacy compatibility path](tuya-camera-bridge-addon/DOCS.md).
+choices. The integration is the sole supported installation path.
 
 ## Privacy and support
 

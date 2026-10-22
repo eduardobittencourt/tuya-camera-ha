@@ -7,18 +7,18 @@ repository root and read [AGENTS.md](../AGENTS.md) before changing code.
 python3.14 -m venv .venv
 . .venv/bin/activate
 pip install -e '.[test]'
-ruff check custom_components tuya-camera-bridge-addon/app tests scripts
+ruff check custom_components tests scripts
 python scripts/check_repository.py
 pytest -m 'not media'
 ```
 
-For the shared Go bridge:
+For the managed Go bridge:
 
 ```sh
-cd tuya-camera-bridge-addon/bridge
+cd bridge
 gofmt -l .
 go test -race ./...
-cd ../..
+cd ..
 python scripts/package_release.py --verify
 python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
 ```
@@ -36,9 +36,9 @@ snapshots and source loss. No Tuya credentials are required.
 Install FFmpeg, MediaMTX 1.21.1 and go2rtc 1.9.14, and build the receiver:
 
 ```sh
-cd tuya-camera-bridge-addon/bridge
+cd bridge
 go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
-cd ../..
+cd ..
 TEST_FFMPEG_BINARY=/usr/bin/ffmpeg \
 TEST_MEDIAMTX_BINARY=/path/to/mediamtx \
 TEST_GO2RTC_BINARY=/path/to/go2rtc \
@@ -47,7 +47,7 @@ pytest -m media --timeout=120
 ```
 
 The [CI workflow](../.github/workflows/ci.yml) shows exact downloads and checksums.
-It also scans secrets and builds the legacy add-on container. The separate
+It also scans secrets. The separate
 [validation workflow](../.github/workflows/validate.yml) runs official hassfest
 and HACS validators without skipped checks.
 

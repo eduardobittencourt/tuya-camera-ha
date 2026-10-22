@@ -18,6 +18,8 @@ busca as câmeras e instala e gerencia o bridge de vídeo automaticamente.
 - Descoberta de câmeras, reconfiguração e novo login quando a sessão expira.
 - Reinício automático do bridge após uma falha.
 - Vídeo H.264 sem reconversão e H.265 convertido para H.264 em 720p / 15 fps.
+- [Controles e sensores LAN](local-controls.md)
+  para modelos que aceitam o protocolo de controle local da Tuya.
 
 Tudo é configurado pela interface. Não é necessário instalar outro add-on,
 configurar ONVIF, copiar IDs ou editar YAML.
@@ -27,12 +29,22 @@ Compatibilidade depende do modelo e do firmware. A autenticação e a sinalizaç
 precisam de internet; o vídeo pode usar conexão direta ou TURN. Não prometemos
 funcionamento totalmente offline nem suporte a toda câmera Tuya.
 
-PTZ, áudio bidirecional, configurações da câmera, MFA e captcha interativos
+PTZ, áudio bidirecional, MFA e captcha interativos
 não estão implementados.
+
+Os novos controles não usam fallback para a nuvem, mas precisam que o firmware
+aceite conexões LAN. Na câmera Positivo a bateria testada, a sessão de mídia
+abriu uma janela de telemetria LAN. A candidata 0.3.4 só habilita sensores e
+ajustes após leituras válidas; entidades antigas sem confirmação são
+desabilitadas, preservando os identificadores. Durante o repouso, as últimas
+leituras continuam disponíveis com horário e indicação de conexão inativa.
+Movimento e som ficam desabilitados por padrão em câmeras a bateria, pois não
+recebem eventos continuamente durante o sono. O stream continua dependendo de
+autenticação e sinalização Tuya pela internet.
 
 ## Instalação
 
-A release estável [0.3.2](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.2) permite instalar sem habilitar versões beta.
+A release estável [0.3.3](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.3) permite instalar sem habilitar versões beta.
 A instalação pelo HACS e o download automático do bridge foram validados no
 HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
 [validação da release estável](validation-0.3.1.md).
@@ -43,7 +55,7 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
 1. No HACS, abra **Repositórios personalizados**.
 2. Adicione `https://github.com/eduardobittencourt/tuya-camera-ha` como **Integração**.
-3. Escolha a release estável `0.3.2`; não é preciso habilitar versões beta.
+3. Escolha a release estável `0.3.3`; não é preciso habilitar versões beta.
 4. Baixe a integração e reinicie o HA.
 5. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
    procure **Tuya Camera Bridge**.

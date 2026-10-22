@@ -1,6 +1,9 @@
 import asyncio
 import sys
+from unittest.mock import patch
 from urllib.parse import urlsplit
+
+import pytest
 
 from custom_components.tuya_camera_bridge.transcoder import FfmpegRelay
 
@@ -79,3 +82,28 @@ async def test_stop_aborts_a_consumer_that_does_not_read(tmp_path, socket_enable
     assert processes and all(process.returncode is not None for process in processes)
     assert not relay._tasks
     writer.transport.abort()
+
+
+@pytest.mark.parametrize("control", [False, True])
+async def test_unload_pending_media_balances_activity_and_reaps_process(control):
+    launched = asyncio.Event()
+    activity = []
+    processes = []
+    create_process = asyncio.create_subprocess_exec
+
+    async def blocking_media(*_args, **kwargs):
+        process = await create_process(sys.executable, "-c", "import time; time.sleep(60)", **kwargs)
+        processes.append(process)
+        launched.set()
+        return process
+
+    relay = FfmpegRelay("unused", lambda: "unused", lambda: False, activity.append)
+    with patch("asyncio.create_subprocess_exec", side_effect=blocking_media):
+        snapshot = asyncio.create_task(relay.control_session(lambda: None) if control else relay.snapshot())
+        await asyncio.wait_for(launched.wait(), 2)
+        await relay.stop()
+    assert snapshot.cancelled()
+    assert processes[0].returncode is not None
+    assert activity == ([] if control else [True, False])
+    assert relay.active_processes == 0
+    assert not relay._tasks

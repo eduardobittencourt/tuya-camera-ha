@@ -55,7 +55,8 @@ async def test_reauthentication_replaces_session_and_reloads_without_password(ha
     from dataclasses import replace
 
     from custom_components.tuya_camera_bridge.config_flow import entry_data
-    existing = MockConfigEntry(domain=DOMAIN, version=2, unique_id="tuya_smart_account", data=entry_data(LOGIN))
+    existing = MockConfigEntry(domain=DOMAIN, version=2, unique_id="tuya_smart_account",
+                               data={**entry_data(LOGIN), "confirmed_entities_policy": 1})
     existing.add_to_hass(hass)
     refreshed = replace(LOGIN, sid="new-session", ecode="new-ecode")
     with patch("custom_components.tuya_camera_bridge.config_flow.TuyaCameraApi.async_login", return_value=refreshed), \
@@ -67,6 +68,7 @@ async def test_reauthentication_replaces_session_and_reloads_without_password(ha
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert existing.data["sid"] == "new-session"
+    assert existing.data["confirmed_entities_policy"] == 1
     assert "password" not in existing.data
     reload.assert_awaited_once_with(existing.entry_id)
 

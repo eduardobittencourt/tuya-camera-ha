@@ -65,7 +65,9 @@ def entry_data(login: LoginResult) -> dict:
         CONF_SID: login.sid, CONF_ECODE: login.ecode, CONF_UID: login.uid,
         CONF_PARTNER: login.partner_identity, CONF_API_HOST: login.api_host,
         CONF_PHONE_DEVICE_ID: login.phone_device_id, CONF_TIMEZONE: login.timezone,
-        CONF_CAMERAS: [{"camera_id": item.device_id, "camera_name": item.name, "product_id": item.product_id}
+        "local_controls_initialized": True,
+        CONF_CAMERAS: [{"camera_id": item.device_id, "camera_name": item.name, "product_id": item.product_id,
+                        **({"local": item.local_config} if item.local_config else {})}
                        for item in login.cameras],
     }
 
@@ -131,7 +133,10 @@ class TuyaCameraBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if error := self._validate(login):
                     errors["base"] = error
                 else:
-                    return self.async_update_reload_and_abort(entry, data=entry_data(login))
+                    data = entry_data(login)
+                    if entry.data.get("confirmed_entities_policy"):
+                        data["confirmed_entities_policy"] = entry.data["confirmed_entities_policy"]
+                    return self.async_update_reload_and_abort(entry, data=data)
         return self.async_show_form(
             step_id="reauth_confirm", data_schema=_credentials_schema(entry.data), errors=errors,
         )

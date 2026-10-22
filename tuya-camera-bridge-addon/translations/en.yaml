@@ -1,4 +1,0 @@
-configuration:
-  empty:
-    name: "Configuration"
-    description: "Configuration is managed by the Tuya Camera Bridge integration."

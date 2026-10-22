@@ -29,7 +29,7 @@ def main() -> None:
         subprocess.run([
             args.go, "build", "-buildvcs=false", "-trimpath", "-ldflags",
             f"-s -w -buildid= -X main.VERSION={version}", "-o", str(target), ".",
-        ], cwd=ROOT / "tuya-camera-bridge-addon" / "bridge",
+        ], cwd=ROOT / "bridge",
             env={**os.environ, "GOOS": "linux", "GOARCH": arch, "CGO_ENABLED": "0"}, check=True)
         hashes[name] = hashlib.sha256(target.read_bytes()).hexdigest()
     info = {"version": version, "sha256": hashes}

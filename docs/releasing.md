@@ -13,8 +13,8 @@ the HACS default catalog are separate steps.
 3. Run `scripts/check_repository.py --archive dist/tuya_camera_bridge.zip`.
    Confirm that the archive contains the integration at its root, branding and
    all license notices, and that both Linux executables match their SHA-256 pins.
-4. Require green Python, Go race/build, synthetic real-media, secrets, add-on
-   Docker build, HACS and hassfest checks on the candidate commit.
+4. Require green Python, Go race/build, synthetic real-media, secrets,
+   HACS and hassfest checks on the candidate commit.
 5. Review live-camera results and remaining limits. Synthetic success does not
    certify another retail model. Never attach account data or private media.
 

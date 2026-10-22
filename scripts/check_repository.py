@@ -54,10 +54,13 @@ def check_repository() -> dict:
     require(manifest["version"] == project["version"] == binary["version"], "Release versions differ")
     integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / "manifest.json").exists()]
     require(integrations == [COMPONENT], "HACS repository must contain exactly one integration")
+    require((ROOT / "bridge" / "go.mod").is_file(), "Missing managed bridge source")
+    require(not (ROOT / "repository.yaml").exists()
+            and not (ROOT / "tuya-camera-bridge-addon").exists(),
+            "Standalone add-on assets must not return to this integration-only repository")
     # hacs/default scans *manifest.json across the clone before running hassfest.
     # Keep auxiliary JSON names outside that glob to avoid ambiguous discovery.
     catalog_manifests = list((ROOT / "custom_components").rglob("*manifest.json"))
-    catalog_manifests += list((ROOT / "tuya-camera-bridge-addon").rglob("*manifest.json"))
     require(catalog_manifests == [COMPONENT / "manifest.json"],
             "HACS catalog discovery must find only the integration manifest")
     require(manifest["domain"] == COMPONENT.name, "Integration domain differs from its directory")

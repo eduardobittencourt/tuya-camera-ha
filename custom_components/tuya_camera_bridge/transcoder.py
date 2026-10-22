@@ -11,10 +11,12 @@ from .bridge import stop_process
 class FfmpegRelay:
     """Expose H.264/AAC MPEG-TS over loopback for native HA streaming."""
 
-    def __init__(self, binary: str, source: Callable[[], str], hevc: Callable[[], bool]) -> None:
+    def __init__(self, binary: str, source: Callable[[], str], hevc: Callable[[], bool],
+                 activity: Callable[[bool], None] | None = None) -> None:
         self.binary = binary
         self.source = source
         self.hevc = hevc
+        self.activity = activity or (lambda _active: None)
         self._path = f"/{secrets.token_urlsafe(24)}.ts"
         self._server: asyncio.Server | None = None
         self._tasks: set[asyncio.Task] = set()
@@ -63,6 +65,14 @@ class FfmpegRelay:
 
     async def snapshot(self) -> bytes | None:
         """Return a fresh frame; an old image must not hide a disconnected camera."""
+        task = asyncio.current_task()
+        self._tasks.add(task)
+        try:
+            return await self._snapshot()
+        finally:
+            self._tasks.discard(task)
+
+    async def _snapshot(self) -> bytes | None:
         async with self._snapshot_lock:
             # Leave time for Tuya signaling within HA's ten-second image deadline;
             # the default five-second FFmpeg input probe can consume that budget.
@@ -75,6 +85,7 @@ class FfmpegRelay:
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
             )
             self._processes.add(process)
+            self.activity(True)
             try:
                 async with asyncio.timeout(40):
                     content, _ = await process.communicate()
@@ -84,6 +95,40 @@ class FfmpegRelay:
             finally:
                 await stop_process(process)
                 self._processes.discard(process)
+                self.activity(False)
+
+    async def control_session(self, ready: Callable[[], None]) -> None:
+        """Hold a bounded, video-only source while LAN commands are in flight."""
+        task = asyncio.current_task()
+        self._tasks.add(task)
+        process = None
+        active = False
+        try:
+            process = await asyncio.create_subprocess_exec(
+                self.binary, "-hide_banner", "-loglevel", "error", "-nostdin", "-rtsp_transport", "tcp",
+                "-timeout", "35000000", "-allowed_media_types", "video", "-fpsprobesize", "0",
+                "-analyzeduration", "1000000", "-probesize", "512000", "-i", self.source(),
+                "-map", "0:v:0", "-c:v", "copy", "-an", "-f", "mpegts", "-muxdelay", "0", "pipe:1",
+                stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
+            )
+            self._processes.add(process)
+            async with asyncio.timeout(60):
+                if not await process.stdout.read(188):
+                    return
+                # Let media negotiation finish before opening the control socket.
+                self.activity(True)
+                active = True
+                ready()
+                while await process.stdout.read(65536):
+                    pass
+        finally:
+            if process is not None:
+                await stop_process(process)
+                self._processes.discard(process)
+            if active:
+                self.activity(False)
+            self._tasks.discard(task)
 
     async def _accept(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         task = asyncio.current_task()
@@ -92,6 +137,7 @@ class FfmpegRelay:
             return
         self._tasks.add(task)
         process: asyncio.subprocess.Process | None = None
+        active = False
         try:
             async with asyncio.timeout(5):
                 headers = await reader.readuntil(b"\r\n\r\n")
@@ -105,6 +151,8 @@ class FfmpegRelay:
                     stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
                 )
                 self._processes.add(process)
+                self.activity(True)
+                active = True
                 assert process.stdout is not None
                 async with asyncio.timeout(40):
                     first = await process.stdout.read(65536)
@@ -128,6 +176,8 @@ class FfmpegRelay:
             if process is not None:
                 await stop_process(process)
                 self._processes.discard(process)
+                if active:
+                    self.activity(False)
             writer.close()
             try:
                 async with asyncio.timeout(2):

@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install '.[test]'
-      - run: ruff check custom_components tuya-camera-bridge-addon/app tests scripts
+      - run: ruff check custom_components tests scripts
       - run: python scripts/check_repository.py
       - run: pytest -m 'not media'
 
@@ -39,8 +39,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26.8"
-          cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
-      - working-directory: tuya-camera-bridge-addon/bridge
+          cache-dependency-path: bridge/go.sum
+      - working-directory: bridge
         run: |
           test -z "$(gofmt -l .)"
           go test -race ./...
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26.8"
-          cache-dependency-path: tuya-camera-bridge-addon/bridge/go.sum
+          cache-dependency-path: bridge/go.sum
       - run: pip install '.[test]'
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: |
@@ -74,7 +74,7 @@ jobs:
             --output /tmp/go2rtc
           echo "32d616af226bd731678ffde328b94cfb94e30339bfefc469cfb76323144615a6  /tmp/go2rtc" | sha256sum --check
           chmod 0755 /tmp/go2rtc
-      - working-directory: tuya-camera-bridge-addon/bridge
+      - working-directory: bridge
         run: go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
       - run: pytest -m media --timeout=120
         env:
@@ -82,13 +82,3 @@ jobs:
           TEST_MEDIAMTX_BINARY: /tmp/mediamtx
           TEST_GO2RTC_BINARY: /tmp/go2rtc
           TEST_WEBRTC_PROBE: /tmp/webrtc-probe
-
-  addon:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: >-
-          docker build
-          --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
-          -f tuya-camera-bridge-addon/Dockerfile
-          tuya-camera-bridge-addon

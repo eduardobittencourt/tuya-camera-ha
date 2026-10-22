@@ -1,6 +1,8 @@
 import asyncio
+import json
+from unittest.mock import AsyncMock
 
-from custom_components.tuya_camera_bridge.api import TuyaCameraApi
+from custom_components.tuya_camera_bridge.api import CameraInfo, TuyaCameraApi
 
 
 class FakeClient:
@@ -40,3 +42,45 @@ def test_discovery_returns_only_camera_categories():
         ("camera-2", "Doorbell"),
         ("camera-1", "Kitchen"),
     ]
+
+
+async def test_lan_bootstrap_uses_exact_device_and_product_without_cloud_states():
+    client = AsyncMock()
+    client._call.side_effect = [
+        {"result": {"devId": "camera", "localKey": "test-lan-key1234", "mac": "aa:bb",
+                    "dataPointInfo": {"dps": {"108": "2"}}, "secKey": "not-for-HA"}},
+        {"result": [{"id": "other", "schemaInfo": {"schema": json.dumps([
+            {"id": 105, "code": "basic_private", "mode": "rw", "property": {"type": "bool"}},
+        ])}}, {"id": "product", "schemaInfo": {"schema": json.dumps([
+            {"id": 108, "code": "basic_nightvision", "mode": "rw", "property": {"type": "enum"}},
+        ])}}]},
+    ]
+    result = await TuyaCameraApi(None).async_local_config(client, CameraInfo("camera", "Camera", "product"))
+    assert result == {"local_key": "test-lan-key1234", "mac": "aa:bb", "schema": [
+        {"id": 108, "code": "basic_nightvision", "mode": "rw", "property": {"type": "enum"}},
+    ]}
+    assert "dps" not in result and "secKey" not in result
+    assert "test-lan-key1234" not in repr(CameraInfo("camera", "Camera", local_config=result))
+
+
+async def test_lan_bootstrap_failure_preserves_stream_only_setup():
+    client = AsyncMock()
+    client._call.side_effect = RuntimeError("private-response")
+    assert await TuyaCameraApi(None).async_local_config(client, CameraInfo("camera", "Camera")) is None
+
+
+async def test_media_provisioning_caches_only_device_password_and_reuses_it():
+    client = AsyncMock()
+    client._call.return_value = {"result": {"password": "test-media", "p2pConfig": {"secret": "discard"}}}
+    data = {"application": "tuya_smart", "username": "test", "api_host": "a1.tuyaus.com", "sid": "sid",
+            "ecode": "ecode", "uid": "uid", "phone_device_id": "phone",
+            "cameras": [{"camera_id": "camera", "local": {"local_key": "test-lan-key1234", "schema": []}}]}
+    from unittest.mock import patch
+
+    with patch("custom_components.tuya_camera_bridge.api.TuyaPasswordClient.for_application", return_value=client):
+        cameras = await TuyaCameraApi(None).async_prepare_local_media(data)
+        assert cameras[0]["local"] == {"local_key": "test-lan-key1234", "schema": [], "media_password": "test-media"}
+        assert data["cameras"][0]["local"].get("media_password") is None
+        data["cameras"] = cameras
+        assert await TuyaCameraApi(None).async_prepare_local_media(data) == cameras
+    client._call.assert_awaited_once_with("m.ipc.v4.rtc.config.get", {"devId": "camera"}, version="1.0")

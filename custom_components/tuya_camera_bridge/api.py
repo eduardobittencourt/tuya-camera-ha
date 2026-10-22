@@ -1,7 +1,7 @@
 """Small, typed facade over the vendored Tuya mobile client."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -28,6 +28,7 @@ class CameraInfo:
     device_id: str
     name: str
     product_id: str = ""
+    local_config: dict | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,8 @@ class TuyaCameraApi:
             "",
         )
         cameras = await self._async_discover_devices(client)
+        cameras = [CameraInfo(camera.device_id, camera.name, camera.product_id,
+                              await self.async_local_config(client, camera)) for camera in cameras]
         return LoginResult(
             username=username.strip(),
             sid=mobile_session.sid,
@@ -138,6 +141,72 @@ class TuyaCameraApi:
         if response.get("success") is True and isinstance(response.get("result"), dict):
             return True
         return "p2pConfig" in response or "skill" in response
+
+    async def async_local_config(self, client, camera: CameraInfo) -> dict | None:
+        """Provision LAN credentials/schema only; never cache cloud DP states."""
+        try:
+            device = await client._call("thing.m.device.get", {"devId": camera.device_id}, version="4.1")
+            device = device.get("result", device)
+            if device.get("devId") != camera.device_id or not isinstance(device.get("localKey"), str):
+                return None
+            if len(device["localKey"].encode("latin1")) != 16:
+                return None
+            products = await client._call("tuya.m.device.ref.info.my.list", {}, version="2.0")
+            product_id = camera.product_id or str(device.get("productId", ""))
+            product = next((item for item in _walk(products)
+                            if str(item.get("id", "")) == product_id and "schemaInfo" in item), {})
+            schema = product.get("schemaInfo", {}).get("schema", [])
+            if isinstance(schema, str):
+                import json
+
+                schema = json.loads(schema)
+            if not isinstance(schema, list):
+                return None
+            # Only public DP definitions and the exact camera's LAN credentials.
+            definitions = [{key: item[key] for key in ("id", "code", "mode", "property") if key in item}
+                           for item in schema if isinstance(item, dict) and "id" in item and "code" in item]
+            return {"local_key": device["localKey"], "mac": device.get("mac", ""), "schema": definitions}
+        except (RuntimeError, ValueError, TypeError, AttributeError, aiohttp.ClientError, TimeoutError):
+            return None
+
+    async def async_prepare_local_controls(self, data: dict) -> list[dict]:
+        """One-time provisioning for entries created before LAN support."""
+        client = TuyaPasswordClient.for_application(
+            TuyaMobileApp(data["application"]), self._session, username=data["username"],
+            endpoint=f"https://{data['api_host']}/api.json",
+        )
+        client.sid, client.ecode, client.uid = data["sid"], data["ecode"], data["uid"]
+        client.device_id = data["phone_device_id"]
+        cameras = []
+        for camera in data["cameras"]:
+            local = await self.async_local_config(
+                client, CameraInfo(camera["camera_id"], camera["camera_name"], camera.get("product_id", "")),
+            )
+            cameras.append({**camera, **({"local": local} if local else {})})
+        return cameras
+
+    async def async_prepare_local_media(self, data: dict) -> list[dict]:
+        """Provision media credentials once; never use cloud signaling here."""
+        client = TuyaPasswordClient.for_application(
+            TuyaMobileApp(data["application"]), self._session, username=data["username"],
+            endpoint=f"https://{data['api_host']}/api.json",
+        )
+        client.sid, client.ecode, client.uid = data["sid"], data["ecode"], data["uid"]
+        client.device_id = data["phone_device_id"]
+        cameras = []
+        for camera in data["cameras"]:
+            local = dict(camera.get("local") or {})
+            if local.get("local_key") and not local.get("media_password"):
+                try:
+                    response = await client._call("m.ipc.v4.rtc.config.get", {"devId": camera["camera_id"]}, version="1.0")
+                    response = response.get("result", response)
+                    password = response.get("password")
+                    if isinstance(password, str) and password:
+                        local["media_password"] = password
+                except (RuntimeError, ValueError, TypeError, AttributeError, aiohttp.ClientError, TimeoutError):
+                    pass
+            cameras.append({**camera, **({"local": local} if local else {})})
+        return cameras
 
 
 def bridge_app_material(application: str) -> dict[str, str]:

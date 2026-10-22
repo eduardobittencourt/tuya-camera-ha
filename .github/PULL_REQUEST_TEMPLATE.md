@@ -9,4 +9,4 @@ public model, firmware and features tested; distinguish real and synthetic media
 
 - [ ] No credentials, identifiers, private media or runtime data are included.
 - [ ] Documentation and compatibility notes reflect the change, where applicable.
-- [ ] Shared bridge changes preserve the compatibility add-on and update binary checksums, where applicable.
+- [ ] Managed bridge changes update both Python/Go contract tests and binary checksums.

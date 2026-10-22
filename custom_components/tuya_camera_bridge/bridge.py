@@ -9,7 +9,9 @@ import time
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
+
+import aiohttp
 
 START_TIMEOUT = 90.0
 STOP_TIMEOUT = 10.0
@@ -70,6 +72,7 @@ class ManagedBridge:
         self.ready = False
         self.auth_required = False
         self.source_port = 0
+        self._local_control_url = ""
         self.sources: dict[str, dict] = {}
         self.camera_status: dict[str, dict] = {}
         self._started = asyncio.Event()
@@ -113,8 +116,7 @@ class ManagedBridge:
             launched = time.monotonic()
             try:
                 process = self.process = await asyncio.create_subprocess_exec(
-                    str(self.binary), "addon", "--managed", "--config", "-",
-                    "--data-dir", str(self.directory),
+                    str(self.binary),
                     cwd=self.directory, stdin=asyncio.subprocess.PIPE,
                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
                     start_new_session=True,
@@ -179,6 +181,14 @@ class ManagedBridge:
             }
             if set(sources) != expected:
                 return
+            control_url = event.get("local_control_url", "")
+            parsed = urlsplit(control_url)
+            if (parsed.scheme == "http" and parsed.hostname == "127.0.0.1" and parsed.port
+                    and not parsed.username and not parsed.password and len(parsed.path) == 49
+                    and not parsed.query and not parsed.fragment):
+                self._local_control_url = control_url
+            else:
+                self._local_control_url = ""
             self.source_port = port
             self.sources = sources
             self.ready = True
@@ -192,10 +202,25 @@ class ManagedBridge:
             self.on_change()
         elif kind == "camera_status" and event.get("camera_id") in self.sources:
             state = event.get("state")
-            if state in {"video", "error"}:
+            if state in {"video", "error", "waking_cloud", "connecting_lan", "wake_mqtt", "wake_media"}:
                 previous = self.camera_status.get(event["camera_id"], {})
                 self.camera_status[event["camera_id"]] = {
                     "state": state,
+                    "cloud_wakes": previous.get("cloud_wakes", 0) + (state == "waking_cloud"),
                     "last_video": time.time() if state == "video" else previous.get("last_video"),
                 }
                 self.on_change()
+
+    async def local_request(self, camera_id: str, operation: str, **payload):
+        """Private loopback IPC; never a cloud control fallback."""
+        if not self.ready or not self._local_control_url:
+            raise BridgeError("Local media is inactive")
+        try:
+            async with aiohttp.ClientSession() as session, session.post(
+                self._local_control_url, json={"camera_id": camera_id, "operation": operation, **payload},
+                timeout=aiohttp.ClientTimeout(total=4), allow_redirects=False,
+            ) as response:
+                response.raise_for_status()
+                return await response.json()
+        except (aiohttp.ClientError, TimeoutError, ValueError):
+            raise BridgeError("The local camera connection is unavailable") from None
