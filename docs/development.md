@@ -36,15 +36,19 @@ snapshots and source loss. No Tuya credentials are required.
 Install FFmpeg, MediaMTX 1.21.1 and go2rtc 1.9.14, and build the receiver:
 
 ```sh
+mkdir -p "$HOME/research/tuya-camera-ha/media-validation/tools"
 cd bridge
-go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
+go build -o "$HOME/research/tuya-camera-ha/media-validation/tools/webrtc-probe" ./internal/testmedia/webrtc
 cd ..
 TEST_FFMPEG_BINARY=/usr/bin/ffmpeg \
 TEST_MEDIAMTX_BINARY=/path/to/mediamtx \
 TEST_GO2RTC_BINARY=/path/to/go2rtc \
-TEST_WEBRTC_PROBE=/tmp/webrtc-probe \
+TEST_WEBRTC_PROBE="$HOME/research/tuya-camera-ha/media-validation/tools/webrtc-probe" \
 pytest -m media --timeout=120
 ```
+
+Run pytest from the repository root. Keep downloaded tools and investigation
+artifacts under `~/research/tuya-camera-ha/`, outside the release payload.
 
 The [CI workflow](../.github/workflows/ci.yml) shows exact downloads and checksums.
 It also scans secrets. The separate

@@ -2,6 +2,35 @@
 
 Candidate prepared and installed for testing on 2026-10-21; not published.
 
+## Repository reconciliation and local release checks — 2026-10-23
+
+Merge `5229f38` reconciles the candidate with published 0.3.3 commit `1c21bd1`.
+The published LAN sensor-registration fix was already included in the candidate;
+the reviewed merge preserves the 0.3.4 source tree while incorporating the remote
+ancestry. The offline-operation guide now links to a separate sanitized
+[wake investigation report](local-wake-investigation.md). Experimental endpoint
+scripts and private captures remain outside the repository and release archive.
+
+Local validation of the reconciled candidate passed:
+
+- Ruff and public repository checks.
+- 71 non-media Python tests using Python 3.14.8 and the pinned HA test environment.
+- Go formatting and `go test -race ./...` with Go 1.26.8.
+- Two real synthetic-camera media tests, using FFmpeg, MediaMTX 1.21.1, go2rtc
+  1.9.14 and a freshly built Go WebRTC receiver.
+- Reproducible Linux amd64/arm64 packaging with `package_release.py --verify`;
+  the tracked executable checksums did not change. The HACS ZIP and executable
+  contents passed the archive checker.
+- Gitleaks 8.30.1 scanned all 144 commits reachable at the merge, with no leaks
+  reported. This scan covers the product history, not private research captures.
+
+No product code or Go source changed during reconciliation. No HA installation,
+restart, new hardware test, push, tag or GitHub release was performed for these
+repository checks. HACS/hassfest and remote CI on the final candidate remain
+required before publication. The latest published release remains 0.3.3;
+the installed candidate's wake path still uses cloud services. Local-wake
+experiments do not establish a supported offline feature.
+
 ## Entity policy
 
 Home Assistant integration tests exercise schema-only legacy entities being
