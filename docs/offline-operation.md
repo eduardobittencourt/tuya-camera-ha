@@ -2,9 +2,12 @@
 
 The intended boundary is cloud access for account provisioning, function
 discovery and the local key, with daily operation entirely over the LAN.
-The current integration does not meet this boundary: waking the tested battery
-camera still requires Tuya cloud services. The development bridge now attempts
-LAN media first, with cloud wake only if the local control port is closed.
+The current integration does not meet this boundary: its wake path for the
+tested battery camera still uses Tuya cloud services. Research prototypes have
+demonstrated local wake and fresh LAN media with controlled network redirection
+and IPv4 WAN isolation; this is not integrated or supported. The development
+bridge attempts LAN media first, with cloud wake only if the local control port
+is closed.
 
 ## What was tested
 
@@ -21,12 +24,47 @@ the camera initiated STUN traffic, followed by LAN control. Cloud traffic was
 also active. The only local command-32 signaling frame was an ICE candidate;
 there was no captured local offer/answer demonstrating offline startup.
 
+## Experimental local wake: current evidence
+
+The [October 2026 investigation report](local-wake-investigation.md) records
+protocol verification, hardware experiments and their cleanup. On the tested
+Positivo battery camera, firmware 1.1.48:
+
+- A local endpoint authenticated the real Tuya low-power v1 connection and sent
+  the nine-byte wake frame while camera IPv4 WAN traffic was blocked after an
+  online bootstrap. TCP 6668 reopened in 1.308 seconds in the first experiment.
+- Separate experiments opened fresh LAN media after local wake and decoded
+  H.264 at 640×360. Wake-to-port-open times were 1.964 and 3.293 seconds.
+- A passive 90-second control sustained three heartbeats. After wake, the
+  channel reset following the next heartbeat. A later wake-only control
+  reproduced this without starting media or probing the local control port.
+- Packet capture confirmed the wake, acknowledgements, heartbeat replies and
+  camera-originated RST. External port-8883 connection attempts after wake are
+  consistent with MQTT but do not establish the application protocol or cause.
+
+The prototype's server-close policy differs from the original cloud capture,
+where the server sent FIN after wake. That comparison is pending; the delay
+observed in one cloud exchange is not a universal protocol requirement.
+
+No experiment has established repeatable wake/standby cycles, long-standby
+recovery, physical sleep or battery consumption, IPv6 isolation, or cold boot
+without cloud. Returning from the hotspot sometimes required an On/Off cycle.
+The current hotspot also removes the Mac from the home LAN: HA needs a verified
+TCP and bidirectional UDP/KCP path before it can be the media client in that
+isolated setup. Ordinary HA recovery snapshots do not prove that path.
+
+Temporary camera blocks and PF rules were removed after each completed test;
+private provisioning files were consumed and removed. Recovery of the camera
+after the latest wake-only run remains pending in the investigation record.
+These results do not change the installed integration's cloud-wake path.
+
 ## Two separate requirements
 
 1. **Wake from standby.** Tuya documents a low-power Wi-Fi module maintaining an
    authenticated TCP connection to a cloud keepalive server and receiving wake
    data on that connection. Knowing the local key does not by itself expose a
-   LAN wake listener. This protocol version has not been verified on our unit.
+   LAN wake listener. This protocol version was verified on our unit in the hotspot capture
+   and local-endpoint experiments described in the investigation report.
    See [Tuya's low-power protocol](https://developer.tuya.com/en/docs/iot-device-dev/tuyaos-package-ipc-device?id=Kcn1qc5he02rw).
 2. **Start media locally.** This now has direct evidence on the tested camera:
    an external research prototype opened two fresh sessions while the camera's
@@ -93,8 +131,8 @@ Talkback on the LAN media profile is not yet supported.
 
 The earlier temporary-WAN-block test covered the prototype. The current hardware
 playback tests do not establish cold wake, camera power-cycle recovery, event
-coverage or full daily operation without WAN. HA frontend playback, snapshots, commands and reload/reconnection validation
-are recorded in [the candidate report](validation-0.3.4.md#native-lan-media-candidate--2026-10-22-utc).
+coverage or full daily operation without WAN. HA frontend playback, snapshots,
+commands and reload/reconnection validation are recorded in [the candidate report](validation-0.3.4.md#native-lan-media-candidate--2026-10-22-utc).
 
 ## Acceptance criteria
 
