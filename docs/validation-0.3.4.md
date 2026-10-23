@@ -1,6 +1,29 @@
 # 0.3.4 candidate validation
 
-Candidate prepared and installed for testing on 2026-10-21; not published.
+Candidate prepared and installed for testing on 2026-10-21; published as stable
+on 2026-10-23.
+
+## Publication — 2026-10-23
+
+[Version 0.3.4](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.4)
+was published at 13:19:27 UTC from commit
+`c63cdb09986919583bc62edcd80ad15eb14ba280` and marked as the latest stable release.
+[CI](https://github.com/eduardobittencourt/tuya-camera-ha/actions/runs/39959818928)
+passed Python, Go, secrets and synthetic media checks;
+[HACS and hassfest](https://github.com/eduardobittencourt/tuya-camera-ha/actions/runs/39959818834)
+also passed on that exact commit. The release workflow rebuilt and verified
+the pinned assets before creating the draft.
+
+All four draft assets matched the local verified package byte for byte. After
+publication, unauthenticated downloads returned HTTP 200 for the HACS ZIP, both
+Linux executables and SHA256SUMS, with matching SHA-256 hashes. The public tag
+resolves to the checked commit. The existing HA installation's 40 files and
+running executable were verified against this package, and the maintainer
+confirmed normal operation before authorizing publication. No fresh-account
+setup or HACS UI reinstall was repeated during publication.
+
+The experimental local-wake endpoint is not included in this release. The
+installed integration continues to use cloud wake for the tested battery camera.
 
 ## Repository reconciliation and local release checks — 2026-10-23
 
@@ -26,8 +49,8 @@ Local validation of the reconciled candidate passed:
 
 No product code or Go source changed during reconciliation. No HA installation,
 restart, new hardware test, push, tag or GitHub release was performed for these
-repository checks. HACS/hassfest and remote CI on the final candidate remain
-required before publication. The latest published release remains 0.3.3;
+repository checks. At that stage HACS/hassfest and remote CI on the final
+candidate were pending and the latest published release was 0.3.3;
 the installed candidate's wake path still uses cloud services. Local-wake
 experiments do not establish a supported offline feature.
 
