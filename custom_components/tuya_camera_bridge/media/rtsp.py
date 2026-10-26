@@ -43,6 +43,9 @@ class MediaSource:
 
     async def acquire(self) -> asyncio.Queue:
         async with self.lock:
+            if self.session is not None and self.session.failed.is_set():
+                # Existing readers must release before another session can start.
+                raise ConnectionError("Camera session is recovering")
             queue: asyncio.Queue = asyncio.Queue(512)
             self.consumers.add(queue)
             try:
