@@ -2,7 +2,13 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -11,6 +17,7 @@ permissions:
 jobs:
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,11 +29,14 @@ jobs:
 
   python:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install '.[test]'
       - run: ruff check custom_components tests scripts
       - run: python scripts/check_repository.py
@@ -34,6 +44,7 @@ jobs:
 
   go:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -50,26 +61,39 @@ jobs:
         with:
           name: managed-integration
           path: dist/*
+          retention-days: 7
 
   media:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-media.txt
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26.8"
           cache-dependency-path: bridge/go.sum
-      - run: pip install '.[test]'
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: |
-          curl --fail --location --retry 3 \
+      - name: Install test dependencies and checksum-pinned FFmpeg
+        timeout-minutes: 4
+        run: |
+          pip install --timeout 15 --retries 2 '.[test]'
+          pip install --timeout 15 --retries 2 --require-hashes --no-deps --only-binary=:all: -r requirements-media.txt
+          python -c 'import imageio_ffmpeg; print("TEST_FFMPEG_BINARY=" + imageio_ffmpeg.get_ffmpeg_exe())' >> "$GITHUB_ENV"
+      - name: Download media test tools
+        timeout-minutes: 3
+        run: |
+          "$TEST_FFMPEG_BINARY" -version
+          curl --fail --location --connect-timeout 10 --max-time 60 --retry 2 --retry-max-time 120 \
             https://github.com/bluenviron/mediamtx/releases/download/v1.21.1/mediamtx_v1.21.1_linux_amd64.tar.gz \
             --output /tmp/mediamtx.tar.gz
           tar -xzf /tmp/mediamtx.tar.gz -C /tmp mediamtx
-          curl --fail --location --retry 3 \
+          curl --fail --location --connect-timeout 10 --max-time 60 --retry 2 --retry-max-time 120 \
             https://github.com/AlexxIT/go2rtc/releases/download/v1.9.14/go2rtc_linux_amd64 \
             --output /tmp/go2rtc
           echo "32d616af226bd731678ffde328b94cfb94e30339bfefc469cfb76323144615a6  /tmp/go2rtc" | sha256sum --check
@@ -78,7 +102,6 @@ jobs:
         run: go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
       - run: pytest -m media --timeout=120
         env:
-          TEST_FFMPEG_BINARY: /usr/bin/ffmpeg
           TEST_MEDIAMTX_BINARY: /tmp/mediamtx
           TEST_GO2RTC_BINARY: /tmp/go2rtc
           TEST_WEBRTC_PROBE: /tmp/webrtc-probe

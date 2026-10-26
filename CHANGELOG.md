@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Avoid duplicate branch-push/PR validation runs, cancel superseded runs, cache
+  Python downloads, and bound job and download times. Replace the media job's
+  slow APT installation with checksum-pinned FFmpeg test tooling while retaining
+  both real codec/transport tests.
+- Configure weekly Dependabot updates for Actions, Python and Go, label camera
+  compatibility reports, and document protected branches/tags and the merge policy.
 - Update English and Brazilian Portuguese installation instructions and badges
   for the HACS default catalog, including guidance for existing installations.
 - Refresh stable-release links to 0.3.4 and document ongoing catalog maintenance.
