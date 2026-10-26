@@ -1,0 +1,77 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [CI, HACS and Home Assistant validation, Dependabot bridge checksums]
+    types: [completed]
+  schedule:
+    - cron: "43 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dependabot-maintenance
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  manage:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    outputs:
+      checksum_candidates: ${{ steps.manage.outputs.checksum_candidates }}
+    steps:
+      # Privileged jobs load scripts from the default branch, never a PR.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/github-script@v9
+        id: manage
+        with:
+          script: |
+            const {manage} = require('./scripts/dependency_automation.cjs');
+            await manage({github, context, core});
+
+  publish-checksums:
+    needs: manage
+    if: needs.manage.outputs.checksum_candidates != '[]' && needs.manage.outputs.checksum_candidates != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate: ${{ fromJSON(needs.manage.outputs.checksum_candidates) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: bridge-checksums
+          path: generated-checksums
+          github-token: ${{ github.token }}
+          run-id: ${{ matrix.candidate.run_id }}
+      - uses: actions/github-script@v9
+        env:
+          CANDIDATE: ${{ toJSON(matrix.candidate) }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const {publish} = require('./scripts/dependency_automation.cjs');
+            const value = JSON.parse(fs.readFileSync('generated-checksums/bridge_checksums.json', 'utf8'));
+            await publish({github, context, core}, JSON.parse(process.env.CANDIDATE), value);

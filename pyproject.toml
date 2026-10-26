@@ -5,7 +5,7 @@ description = "Tuya mobile WebRTC camera integration and bridge for Home Assista
 requires-python = ">=3.14"
 
 [project.optional-dependencies]
-test = ["homeassistant==2026.9.4", "pytest-homeassistant-custom-component==0.13.367", "ha-ffmpeg", "av==17.0.1", "PyTurboJPEG==1.8.3", "tuya-mobile==1.2.0", "tinytuya==1.20.0", "ruff"]
+test = ["homeassistant==2026.9.4", "pytest-homeassistant-custom-component==0.13.367", "ha-ffmpeg", "av==19.0.2", "PyTurboJPEG==2.5.0", "tuya-mobile==1.2.0", "tinytuya==1.20.0", "ruff"]
 
 [tool.pytest.ini_options]
 markers = ["media: real FFmpeg/RTSP end-to-end tests with a synthetic camera"]

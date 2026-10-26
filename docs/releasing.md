@@ -24,7 +24,11 @@ See [development commands](development.md) and the
 ## Draft and publish
 
 After the candidate is reviewed and merged, run **Release integration** on the
-exact intended commit. The workflow builds reproducible assets and creates or
+exact intended commit on `main`. The workflow requires successful CI and HACS/HA
+validation runs, including all six individual jobs, on that exact commit before
+building assets. Pending, failed or skipped checks block draft creation. Dependency
+auto-merge does not replace the compatibility and live-camera review above.
+The workflow builds reproducible assets and creates or
 refreshes a **draft release** for the manifest version (stable for `X.Y.Z`, prerelease for
 versions such as `X.Y.Zb1`). It refuses to replace
 a published release. Review the full target commit, notes and assets:
