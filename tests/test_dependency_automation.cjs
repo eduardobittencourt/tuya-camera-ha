@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
-  checksumCandidate, manage, publish, releaseGate} =
+  approveBotChecks, checksumCandidate, manage, publish, releaseGate} =
   require('../scripts/dependency_automation.cjs');
 
 const repository = 'owner/camera';
@@ -93,6 +93,33 @@ test('checksum retries only dispatch completed failures when retry is allowed', 
     await dispatchChecksumBuild(github, context.repo, pr(), true);
     assert.equal(calls.length, latest.status === 'completed' && latest.conclusion !== 'success' ? 1 : 0);
   }
+});
+
+test('approval starts only known pending workflows on the exact same-repository bot PR head', async () => {
+  const current = {...pr(), number: 10};
+  const original = {id: 456, event: 'pull_request', conclusion: 'action_required',
+    actor: {login: 'github-actions[bot]'}, head_sha: 'old', head_branch: current.head.ref,
+    head_repository: {full_name: repository}, pull_requests: [{number: 10}]};
+  for (const change of [null, run => run.actor = {login: 'someone'},
+    run => run.head_sha = 'other', run => run.head_branch = 'other',
+    run => run.head_repository = {full_name: 'fork/camera'}, run => run.pull_requests = [{number: 20}],
+    run => run.event = 'workflow_dispatch', run => run.conclusion = 'success']) {
+    const run = {...original};
+    if (change) change(run);
+    const calls = [];
+    const github = {rest: {actions: {
+      listWorkflowRuns: async args => {
+        assert.ok(['ci.yml', 'validate.yml'].includes(args.workflow_id));
+        assert.equal(args.head_sha, 'old');
+        assert.equal(args.status, 'action_required');
+        return {data: {workflow_runs: [run]}};
+      },
+      approveWorkflowRun: async args => calls.push(args.run_id),
+    }}};
+    await approveBotChecks(github, context.repo, current);
+    assert.deepEqual(calls, change ? [] : [456, 456]);
+  }
+  await approveBotChecks({}, context.repo, {...current, user: {login: 'someone'}});
 });
 
 test('privileged publication rejects foreign, failed, forged and stale build runs', async () => {

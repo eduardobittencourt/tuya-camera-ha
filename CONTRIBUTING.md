@@ -53,6 +53,11 @@ Keep Home Assistant and its pytest plugin together for compatibility. The depend
 maintenance workflow refreshes outdated PR branches and explicitly dispatches CI
 after its own commits. It runs when PRs change, checks finish, `main` changes,
 hourly and on demand. Conflicts and failing checks still require a fix.
+GitHub can hold PR workflows for approval after a `GITHUB_TOKEN` update. The
+maintainer workflow starts only the known CI and HA validation workflows waiting
+on the exact current head of a same-repository Dependabot PR, with the expected
+GitHub Actions actor and PR association. This starts tests without waiving any
+required result or approving reviews.
 
 For PRs changing only Go module files and the binary manifest, an isolated build
 with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,

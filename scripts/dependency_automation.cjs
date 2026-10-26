@@ -56,6 +56,27 @@ async function dispatchChecksumBuild(github, repo, pr, retryFailed = false) {
   }
 }
 
+async function approveBotChecks(github, repo, pr) {
+  const repository = `${repo.owner}/${repo.repo}`;
+  if (!eligible(pr, repository)) return;
+  for (const workflow_id of WORKFLOWS) {
+    const {data} = await github.rest.actions.listWorkflowRuns({
+      ...repo, workflow_id, head_sha: pr.head.sha, event: 'pull_request',
+      status: 'action_required', per_page: 100,
+    });
+    for (const run of data.workflow_runs ?? []) {
+      // Only start known workflows for this exact same-repository bot commit.
+      // Approval starts the tests; it does not satisfy or bypass merge checks.
+      if (run.event === 'pull_request' && run.conclusion === 'action_required'
+          && run.actor?.login === 'github-actions[bot]' && run.head_sha === pr.head.sha
+          && run.head_branch === pr.head.ref && run.head_repository?.full_name === repository
+          && run.pull_requests?.some(item => item.number === pr.number)) {
+        await github.rest.actions.approveWorkflowRun({...repo, run_id: run.id});
+      }
+    }
+  }
+}
+
 async function checksumCandidate(github, context, pr, files) {
   const repository = `${context.repo.owner}/${context.repo.repo}`;
   if (!eligible(pr, repository) || !goOnly(files)) return null;
@@ -106,6 +127,7 @@ async function manage({github, context, core}) {
     try {
       const {data: pr} = await github.rest.pulls.get({...repo, pull_number: entry.number});
       if (!eligible(pr, repository)) continue;
+      await approveBotChecks(github, repo, pr);
       if (!pr.auto_merge && !['unknown', 'dirty'].includes(pr.mergeable_state)) {
         if (pr.mergeable_state === 'clean') {
           // GitHub only offers auto-merge while requirements are outstanding.
@@ -218,4 +240,4 @@ async function releaseGate({github, context}) {
 }
 
 module.exports = {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
-  checksumCandidate, manage, publish, releaseGate};
+  approveBotChecks, checksumCandidate, manage, publish, releaseGate};
