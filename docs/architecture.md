@@ -62,13 +62,14 @@ is no separate protocol executable.
 - HA's FFmpeg/Stream: decoding, snapshots, conversion and frontend delivery.
 
 The published aiortc 1.15.0 requires PyAV below 18, incompatible with HA 2026.10's
-PyAV 19. This beta pins the official upstream
+PyAV 19. Version 0.4.0 retains the tested official upstream
 [PyAV compatibility change](https://github.com/aiortc/aiortc/commit/10ccd168528d93996d013d0ecfae679c3a764b68)
 by immutable commit URL. No HA package is downgraded and no dependency constraint
 is bypassed. Replace this development pin with a compatible published aiortc
 release after rerunning dependency and peer/media tests. Installation needs
 access to GitHub and Python package indexes; URL requirements may be rechecked
-by HA at startup. This is a beta limitation, not a zero-dependency claim.
+by HA at startup. Stable promotion retains this installation/dependency limitation;
+it does not remove the external dependency.
 
 ## Lifecycle and privacy
 

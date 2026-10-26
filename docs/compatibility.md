@@ -8,7 +8,7 @@ does not prove that a camera can deliver media through that protocol.
 
 | Commercial model | Firmware | App | Camera source | Validated behavior | Status |
 | --- | --- | --- | --- | --- | --- |
-| [Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736)](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p) | 1.1.48 | Tuya Smart | HEVC 1920×1080; 16-bit PCM, 8 kHz mono | UI login, discovery, HLS video/audio, native HA WebRTC, fresh snapshots, automatic bridge recovery, image/sound on owner's phone | Working on HA OS 2026.9.4 amd64 with 0.3.0b1 |
+| [Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736)](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p) | 1.1.48 | Tuya Smart | LAN H.264/PCM; cloud HEVC/PCM | UI login/discovery, HLS video/audio, fresh snapshots, shared LAN controls/telemetry, reload/standby; owner confirmed normal beta use | Python 0.4 line validated on HA Core 2026.10.4 Linux amd64 |
 
 This row describes a single tested unit. The owner identified its retail model
 using the manufacturer listing above; firmware came from authenticated device
@@ -17,15 +17,16 @@ used Tuya Smart: login through the Positivo-branded app is not implemented.
 
 This is a battery-powered model, but the test did not record its power state or
 measure battery endurance, long idle/wake cycles or continuous day-long operation.
-Live viewing can keep a battery camera awake and affect endurance. Development
-versions share [LAN controls](local-controls.md) with media activity. On
+Live viewing can keep a battery camera awake and affect endurance. Version 0.4
+shares [LAN controls](local-controls.md) with media activity. On
 2026-10-21 this unit delivered LAN telemetry during HA snapshot retrieval and
 the control session subsequently closed. The port can refuse connections
 outside that window. Only settings and sensors with valid observations are
 enabled; the battery scale and endurance still need verification. PTZ and
 talkback are not exposed.
 
-See [the validation report](validation-0.3.0b1.md) for measured results and
+See [the stable validation report](validation-0.4.0.md) and
+[Python migration measurements](validation-0.4.0b2.md) for measured results and
 untested failure paths. H.264 and H.265 also have synthetic media coverage;
 synthetic fixtures are not additional verified retail models.
 
@@ -46,7 +47,7 @@ synthetic fixtures are not additional verified retail models.
 Other battery/low-power models, OEM-specific app accounts, NVRs, doorbells and
 other audio codecs are not covered by the real-device test. Shared devices and regional account
 variations may also affect discovery. Some Tuya cameras expose only a different
-proprietary media transport and will not work with this bridge.
+proprietary media transport and will not work with this integration.
 
 ## Report your model
 

@@ -20,17 +20,15 @@ Tuya Camera is included in the [HACS default catalog](https://github.com/hacs/de
 You do not need to add a custom repository.
 
 The name **Tuya Camera**, domain `tuya_camera` and archive `tuya_camera.zip`
-apply starting with **0.4.0b2**. Stable 0.3.x and beta 0.4.0b1 use the former
-**Tuya Camera Bridge** name, domain and archive. Enable beta versions to install
-the renamed integration.
+apply starting with **0.4.0b2**, including stable **0.4.0**. Versions 0.3.x and
+0.4.0b1 use the former **Tuya Camera Bridge** name, domain and archive. Beta
+versions do not need to be enabled for stable 0.4.0.
 
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
 1. Open **HACS**, search for **Tuya Camera** and open its repository page.
-2. Choose stable **0.3.x** for **Tuya Camera Bridge**, or enable beta versions
-   and select **0.4.0b2** for **Tuya Camera**. Download the selected release.
-3. Restart HA, then add **Tuya Camera Bridge** for stable 0.3.x or **Tuya Camera**
-   for beta 0.4.0b2 in Devices & services.
+2. Download stable **0.4.0**. Beta versions do not need to be enabled.
+3. Restart HA, then add **Tuya Camera** in Devices & services.
 4. Select the app that owns the account and enter its credentials and country
    calling code. These app namespaces are different; choose the correct one.
 5. Open a discovered camera. Wake-up and the first HLS segment can take several
@@ -44,8 +42,8 @@ If the repository does not appear in search, clear HACS filters and use the
 **Open in HACS** button above.
 
 A draft cannot be installed publicly. Releases contain `tuya_camera.zip`
-and `SHA256SUMS`. The 0.4.0 beta line runs all protocols in Python. The stable
-0.3.x line retains the Go executable and the previous archive name.
+and `SHA256SUMS`. The 0.4 line runs all protocols in Python. Historical 0.3.x
+releases retain the Go executable and the previous archive name.
 
 ## Manual installation
 
@@ -54,17 +52,22 @@ into `/config/custom_components/tuya_camera/`. The resulting directory
 must contain `manifest.json`, `__init__.py` and `brand/`, not an extra nested
 `tuya_camera` directory. Restart HA and complete the same UI login flow.
 HA installs the declared Python dependencies automatically; no protocol executable
-is downloaded. See the beta [dependency compatibility note](architecture.md#dependencies-and-compatibility).
+is downloaded. See the [dependency compatibility note](architecture.md#dependencies-and-compatibility).
 
 ## Updates and rediscovery
 
-Catalog inclusion itself does not require reinstallation. However, **0.4.0b2
-changes the integration domain** from `tuya_camera_bridge` to `tuya_camera`.
+Catalog inclusion itself does not require reinstallation. However, the **0.4
+line changes the integration domain** from `tuya_camera_bridge` to `tuya_camera`.
 Updating files and restarting alone does not migrate an existing account entry.
 
-For a clean reinstall from an earlier version, remove the old integration entry
+If already using **0.4.0b2** under `tuya_camera`, select stable **0.4.0** in HACS,
+install and restart normally. Keep the existing account and entities. Disable
+prereleases after switching to stable; the fixed 0.4.0b2 selection used during
+the beta transition is no longer needed once HACS tracks stable 0.4.0.
+
+For a clean reinstall from the former domain, remove the old integration entry
 in Devices & services, uninstall its files through HACS, then refresh the
-repository and select 0.4.0b2 with beta versions enabled. HACS can retain the
+repository and select stable 0.4.0. HACS can retain the
 former folder/ZIP in its repository cache; uninstall/reinstall alone did not
 clear this on the validated installation. If it still requests the former
 `tuya_camera_bridge` manifest, use the published ZIP following
@@ -73,7 +76,7 @@ before restoring HACS tracking. Restart HA and add **Tuya Camera** using the
 same account/app. Check dashboards and automations
 against the newly created entity IDs. The old component directory must not be
 left alongside the new one. An operator can instead perform an offline registry
-migration, retaining entry/entity/device IDs; this is not automatic in this beta.
+migration, retaining entry/entity/device IDs; this migration is not automatic.
 Downgrading to the former domain also requires a reinstall or an inverse offline
 migration. Selecting an older release in HACS alone does not change account or
 registry domains.
@@ -81,9 +84,9 @@ registry domains.
 If HACS retains the former domain or ZIP, use the manual ZIP fallback above and
 contact the [maintainers](../SUPPORT.md) for assistance before restoring HACS
 tracking. Cache reconciliation and explicit release selection currently require
-maintainer assistance; a general self-service procedure is not provided in this
-beta. Subsequent releases under the same domain should follow the normal
-update/restart path after this cache transition is resolved.
+maintainer assistance for former-domain records; a general self-service cache
+migration procedure is not provided. Subsequent releases under the same domain
+follow the normal update/restart path after this cache transition is resolved.
 Never reuse a published version for different code.
 
 Use **Reconfigure** on the integration entry to sign in again and refresh the

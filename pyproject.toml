@@ -1,6 +1,6 @@
 [project]
 name = "tuya-camera-ha"
-version = "0.4.0b2"
+version = "0.4.0"
 description = "Python Tuya camera integration for Home Assistant"
 requires-python = ">=3.14"
 

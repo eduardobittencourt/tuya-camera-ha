@@ -10,14 +10,14 @@ Uma integração para conectar câmeras compatíveis do **Tuya Smart e Smart Lif
 pelo próprio Home Assistant. Você faz login na interface do HA; a integração
 busca as câmeras e executa os protocolos em Python dentro da integração.
 
-**Desenvolvimento / beta 0.4.0:** o executável Go foi removido. A estável 0.3.4
-mantém a arquitetura anterior. Habilite versões beta no HACS para testar a
-migração; veja a [arquitetura](architecture.md).
+**Estável 0.4.0:** os protocolos da câmera executam em Python dentro da
+integração. O executável Go foi removido. Não é preciso habilitar versões beta
+no HACS; veja a [arquitetura](architecture.md).
 
 [English](../README.md) · [Instalação detalhada](installation.md) ·
 [Compatibilidade](compatibility.md) · [Resolução de problemas](troubleshooting.md)
 
-[Validação da beta Python](validation-0.4.0b1.md) · [Validação da troca de nome](validation-0.4.0b2.md)
+[Validação da estável](validation-0.4.0.md) · [Validação da migração Python](validation-0.4.0b1.md) · [Validação da troca de domínio](validation-0.4.0b2.md)
 
 ## O que funciona
 
@@ -42,7 +42,7 @@ não estão implementados.
 
 Os novos controles não usam fallback para a nuvem, mas precisam que o firmware
 aceite conexões LAN. Na câmera Positivo a bateria testada, a sessão de mídia
-abriu uma janela de telemetria LAN. A versão 0.3.4 só habilita sensores e
+abriu uma janela de telemetria LAN. A integração só habilita sensores e
 ajustes após leituras válidas; entidades antigas sem confirmação são
 desabilitadas, preservando os identificadores. Durante o repouso, as últimas
 leituras continuam disponíveis com horário e indicação de conexão inativa.
@@ -54,11 +54,10 @@ autenticação e sinalização Tuya pela internet.
 
 Disponível no **catálogo padrão do HACS**, sem adicionar repositório personalizado.
 
-A release estável [0.3.4](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.4) permite instalar sem habilitar versões beta.
-Veja o [relatório de validação e publicação da 0.3.4](validation-0.3.4.md).
-A instalação pelo HACS e o download automático do bridge foram validados no
-HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
-[validação da release estável](validation-0.3.1.md).
+A release estável [0.4.0](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.4.0) permite instalar sem habilitar versões beta.
+Veja o [relatório da estável](validation-0.4.0.md). O runtime Python e o pacote
+com domínio novo foram validados pelo HACS no HA Core 2026.10.4 antes da promoção;
+os [resultados medidos](validation-0.4.0b2.md) incluem a preservação da conta e entidades.
 
 É necessário ter **HA 2026.9 ou mais recente**, Linux, HACS e
 FFmpeg. HA OS e Container já incluem FFmpeg. Em uma instalação Linux própria,
@@ -66,33 +65,32 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
 [![Abrir no HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-O novo nome/domínio vale a partir da **0.4.0b2**, disponível com versões beta
-habilitadas. Releases anteriores aparecem como **Tuya Camera Bridge**. Para trocar
+O novo nome/domínio vale a partir da **0.4.0b2**, incluindo a estável **0.4.0**.
+Releases anteriores aparecem como **Tuya Camera Bridge**. Para trocar
 uma instalação existente, siga o [procedimento de mudança de domínio](installation.md#updates-and-rediscovery).
 
 1. Abra o **HACS** e procure **Tuya Camera**.
-2. Escolha a release: a estável **0.3.x** usa **Tuya Camera Bridge**; habilite
-   versões beta e selecione **0.4.0b2** para **Tuya Camera**. Baixe e reinicie o HA.
+2. Baixe a release estável **0.4.0** e reinicie o HA.
 3. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
-   procure **Tuya Camera Bridge** para a estável 0.3.x ou **Tuya Camera** para a beta 0.4.0b2.
+   procure **Tuya Camera**.
 4. Escolha Tuya Smart ou Smart Life e informe a conta, a senha e o código de
    país usados no aplicativo. Para o Brasil, use `55`.
 5. Abra a câmera e ative o som no player.
 
-Uma release em rascunho não pode ser baixada publicamente. A beta 0.4 usa
+Uma release em rascunho não pode ser baixada publicamente. A versão 0.4 usa
 dependências Python instaladas pelo HA, incluindo um commit oficial do aiortc
 compatível com o PyAV 19. Não baixa executável Go. Instalação e verificações
 de dependências precisam de acesso ao GitHub e aos índices Python.
 
 Se a instalação usa `tuya_camera_bridge`, inclusive por repositório personalizado,
 siga o [procedimento de mudança de domínio](installation.md#updates-and-rediscovery)
-antes de trocar para a 0.4.0b2. A atualização comum pelo HACS vale dentro do mesmo domínio.
+antes de trocar para a 0.4.0. A atualização comum pelo HACS vale dentro do mesmo domínio.
 
 ## Câmera testada
 
 A **Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736)**,
 com firmware **1.1.48**, foi testada pelo Tuya Smart no HA OS 2026.9.4.
-Vídeo HEVC/1080p, som PCM, capturas de imagem, recuperação do bridge e reprodução
+Vídeo HEVC/1080p, som PCM, capturas de imagem, recuperação de sessão e reprodução
 no celular funcionaram. O proprietário identificou o modelo por este
 [anúncio do fabricante](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
 Ainda não medimos autonomia da bateria nem ciclos longos de repouso e despertar.
