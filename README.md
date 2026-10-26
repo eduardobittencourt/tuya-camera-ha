@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml)
 [![HACS validation](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml)
-[![HACS custom integration](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://www.hacs.dev/docs/faq/custom_repositories/)
+[![HACS default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/default/blob/master/integration)
 [![Home Assistant 2026.9+](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue.svg)](https://www.home-assistant.io/)
 [![License MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -37,7 +37,10 @@ do not make the existing media bridge fully offline.
 
 ## Install with HACS
 
-Published release: [0.3.3](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.3).
+Available in the **HACS default catalog**. No custom repository is needed.
+
+Published release: [0.3.4](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.4).
+See the [0.3.4 validation and publication report](docs/validation-0.3.4.md).
 HACS installation and automatic bridge download have been verified on HA OS
 2026.9.4; see the [stable validation report](docs/validation-0.3.1.md) and
 [original beta validation](docs/validation-0.3.0b1.md).
@@ -48,9 +51,8 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-1. Add `https://github.com/eduardobittencourt/tuya-camera-ha` under **HACS → Custom
-   repositories**, selecting **Integration**.
-2. Select the stable `0.3.3` release, download it and restart Home Assistant.
+1. Open **HACS** and search for **Tuya Camera Bridge**.
+2. Open the repository, download the latest stable release and restart Home Assistant.
    Beta versions do not need to be enabled.
 3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
@@ -62,8 +64,8 @@ and a development checkout may reference unpublished bridge files. First setup
 and upgrades need GitHub access to download the matching executable. The verified
 cache is reused on later starts. See [installation and migration](docs/installation.md).
 
-This repository can be added manually to HACS; it is not currently listed in the
-HACS default catalog. Passing validation is separate from catalog acceptance.
+Already installed through a custom repository? Keep the existing installation
+and update through HACS as usual; no reinstall or account reconfiguration is needed.
 
 ## Tested cameras
 

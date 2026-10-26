@@ -53,7 +53,8 @@ artifacts under `~/research/tuya-camera-ha/`, outside the release payload.
 The [CI workflow](../.github/workflows/ci.yml) shows exact downloads and checksums.
 It also scans secrets. The separate
 [validation workflow](../.github/workflows/validate.yml) runs official hassfest
-and HACS validators without skipped checks.
+and HACS validators without skipped checks on pushes, pull requests, daily and
+on demand, so upstream validation changes are detected between releases.
 
 Never record private account sessions or media fixtures in the repository.
 Real-camera validation belongs in a sanitized [compatibility report](compatibility.md).

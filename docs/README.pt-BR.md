@@ -4,6 +4,8 @@
 
 # Tuya Camera Bridge para Home Assistant
 
+[![HACS padrão](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/default/blob/master/integration)
+
 Uma integração para conectar câmeras compatíveis do **Tuya Smart e Smart Life**
 pelo próprio Home Assistant. Você faz login na interface do HA; a integração
 busca as câmeras e instala e gerencia o bridge de vídeo automaticamente.
@@ -34,7 +36,7 @@ não estão implementados.
 
 Os novos controles não usam fallback para a nuvem, mas precisam que o firmware
 aceite conexões LAN. Na câmera Positivo a bateria testada, a sessão de mídia
-abriu uma janela de telemetria LAN. A candidata 0.3.4 só habilita sensores e
+abriu uma janela de telemetria LAN. A versão 0.3.4 só habilita sensores e
 ajustes após leituras válidas; entidades antigas sem confirmação são
 desabilitadas, preservando os identificadores. Durante o repouso, as últimas
 leituras continuam disponíveis com horário e indicação de conexão inativa.
@@ -44,7 +46,10 @@ autenticação e sinalização Tuya pela internet.
 
 ## Instalação
 
-A release estável [0.3.3](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.3) permite instalar sem habilitar versões beta.
+Disponível no **catálogo padrão do HACS**, sem adicionar repositório personalizado.
+
+A release estável [0.3.4](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.4) permite instalar sem habilitar versões beta.
+Veja o [relatório de validação e publicação da 0.3.4](validation-0.3.4.md).
 A instalação pelo HACS e o download automático do bridge foram validados no
 HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
 [validação da release estável](validation-0.3.1.md).
@@ -53,20 +58,24 @@ HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
 FFmpeg. HA OS e Container já incluem FFmpeg. Em uma instalação Linux própria,
 o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
-1. No HACS, abra **Repositórios personalizados**.
-2. Adicione `https://github.com/eduardobittencourt/tuya-camera-ha` como **Integração**.
-3. Escolha a release estável `0.3.3`; não é preciso habilitar versões beta.
-4. Baixe a integração e reinicie o HA.
-5. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
+[![Abrir no HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
+
+1. Abra o **HACS** e procure **Tuya Camera Bridge**.
+2. Abra o repositório, baixe a versão estável mais recente e reinicie o HA.
+   Não é preciso habilitar versões beta.
+3. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
    procure **Tuya Camera Bridge**.
-6. Escolha Tuya Smart ou Smart Life e informe a conta, a senha e o código de
+4. Escolha Tuya Smart ou Smart Life e informe a conta, a senha e o código de
    país usados no aplicativo. Para o Brasil, use `55`.
-7. Abra a câmera e ative o som no player.
+5. Abra a câmera e ative o som no player.
 
 Uma release em rascunho não pode ser baixada publicamente. A primeira instalação
 precisa dos binários publicados no GitHub; uma branch de desenvolvimento pode
-referenciar arquivos ainda não publicados. O repositório é adicionado manualmente
-ao HACS e ainda não está no catálogo padrão.
+referenciar arquivos ainda não publicados.
+
+Se você já instalou por repositório personalizado, mantenha a instalação e
+atualize normalmente pelo HACS. Não é necessário reinstalar nem configurar a conta
+novamente.
 
 ## Câmera testada
 

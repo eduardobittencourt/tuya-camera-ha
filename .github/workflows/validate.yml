@@ -3,6 +3,8 @@ name: HACS and Home Assistant validation
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:

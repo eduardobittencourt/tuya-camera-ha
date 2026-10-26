@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Update English and Brazilian Portuguese installation instructions and badges
+  for the HACS default catalog, including guidance for existing installations.
+- Refresh stable-release links to 0.3.4 and document ongoing catalog maintenance.
+- Run HACS and hassfest validation daily to detect upstream requirement changes.
+
 ## 0.3.4 — Native LAN media and confirmed battery-camera controls
 
 - Add native protocol-3.3 LAN signaling and AES/KCP media, attempting LAN first

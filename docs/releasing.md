@@ -1,8 +1,8 @@
 # Preparing a release
 
 A GitHub draft is for maintainer review. HACS users cannot download its assets
-until the release is published. Adding a custom repository and acceptance into
-the HACS default catalog are separate steps.
+until the release is published. This repository is already included in the
+HACS default catalog; future releases use the existing listing.
 
 ## Verify the candidate
 
@@ -57,10 +57,15 @@ Icons and logos live in the integration's `brand/` directory, supported by HA
 an external Home Assistant brands submission is not required for these assets.
 See the [HA announcement](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/).
 
-For default-catalog inclusion, first publish a working release, complete the
-public installation check, then follow the current
-[HACS publishing requirements](https://www.hacs.xyz/docs/publish/start/) and
-[integration requirements](https://www.hacs.xyz/docs/publish/integration/).
-Catalog submission and acceptance are not automatic and are not part of creating
-the release draft. Keep repository description, topics, issues and community
-documentation current.
+The repository was accepted into the default catalog in
+[hacs/default#11595](https://github.com/hacs/default/pull/11595) on 2026-10-21.
+New releases do not need another catalog submission. Keep following the
+[HACS publishing requirements](https://www.hacs.dev/docs/publish/start/) and
+[integration requirements](https://www.hacs.dev/docs/publish/integration/), and
+keep repository description, topics, issues and community documentation current.
+
+The [validation workflow](../.github/workflows/validate.yml) runs HACS and hassfest
+on pushes, pull requests, daily and on demand. Review scheduled failures even
+when no code has changed: upstream validators can introduce new requirements.
+After publishing, update the stable-release links and validation report references
+in both READMEs.

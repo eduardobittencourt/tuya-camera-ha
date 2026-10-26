@@ -18,5 +18,5 @@ Do not post raw logs, API responses, `.storage`, backups, tokens, device IDs,
 serial numbers, stream URLs or private images. Review any diagnostics before
 attaching them. Nobody needs your password to review a public issue.
 
-This is an independent community beta maintained by volunteers. Responses and
+This is an independent community project maintained by volunteers. Responses and
 device support are not guaranteed. Help is available in English or Portuguese.

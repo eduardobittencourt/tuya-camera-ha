@@ -16,9 +16,13 @@ encoding and can be expensive on small hosts.
 
 ## HACS
 
-1. Add this repository as an **Integration** under HACS custom repositories:
-   `https://github.com/eduardobittencourt/tuya-camera-ha`.
-2. Download a published release. Enable beta versions for prereleases.
+Tuya Camera Bridge is included in the [HACS default catalog](https://github.com/hacs/default/blob/master/integration).
+You do not need to add a custom repository.
+
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
+
+1. Open **HACS**, search for **Tuya Camera Bridge** and open its repository page.
+2. Download the latest stable release. Enable beta versions only for prereleases.
 3. Restart HA, then add **Tuya Camera Bridge** in Devices & services.
 4. Select the app that owns the account and enter its credentials and country
    calling code. These app namespaces are different; choose the correct one.
@@ -28,6 +32,9 @@ encoding and can be expensive on small hosts.
 The configuration is completed in HA. A Tuya IoT developer project, cloud API
 client keys, a separate add-on and manually configured RTSP ports are not required.
 MFA/captcha challenges can prevent login; see [troubleshooting](troubleshooting.md).
+
+If the repository does not appear in search, clear HACS filters and use the
+**Open in HACS** button above.
 
 A draft release cannot be installed by the public. The release must include
 `tuya_camera_bridge.zip`, both Linux executables and `SHA256SUMS`; the integration
@@ -42,6 +49,10 @@ must contain `manifest.json`, `__init__.py` and `brand/`, not an extra nested
 The matching bridge executable is downloaded automatically.
 
 ## Updates and rediscovery
+
+Existing custom-repository installations use the same repository and integration
+domain. Keep the installation and account configuration; catalog inclusion does
+not require removal, reinstallation or another login.
 
 Update through HACS and restart HA. Executable updates are downloaded and verified
 on integration setup; a valid cached binary is reused when it matches the release.
