@@ -1,6 +1,7 @@
 # Development
 
-Use Python 3.14 and Go 1.26.8. Tests pin Home Assistant 2026.9.4. Work from the
+Use Python 3.14 and Go 1.26.8. The Home Assistant test version and its matching
+pytest plugin are pinned together in `pyproject.toml`. Work from the
 repository root and read [AGENTS.md](../AGENTS.md) before changing code.
 
 ```sh
@@ -9,6 +10,7 @@ python3.14 -m venv .venv
 pip install -e '.[test]'
 ruff check custom_components tests scripts
 python scripts/check_repository.py
+node --test tests/test_dependency_automation.cjs
 pytest -m 'not media'
 ```
 
