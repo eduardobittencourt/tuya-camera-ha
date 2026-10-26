@@ -124,7 +124,7 @@ async function manage({github, context, core}) {
         }
       }
       const {data: comparison} = await github.rest.repos.compareCommitsWithBasehead({
-        ...repo, basehead: `${pr.base.sha}...${pr.head.sha}`,
+        ...repo, basehead: `main...${pr.head.sha}`,
       });
       if (comparison.behind_by > 0) {
         await github.rest.pulls.updateBranch({
