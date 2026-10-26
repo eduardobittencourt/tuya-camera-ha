@@ -1,84 +1,32 @@
 name: Dependabot auto-merge
 
 on:
-  push:
+  pull_request_target:
     branches: [main]
-  workflow_run:
-    workflows: [CI, HACS and Home Assistant validation, Dependabot bridge checksums]
-    types: [completed]
-  schedule:
-    - cron: "43 * * * *"
-  workflow_dispatch:
+    types: [opened, reopened, synchronize, ready_for_review]
 
-concurrency:
-  group: dependabot-maintenance
-  cancel-in-progress: false
-
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
-  manage:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: write
-    outputs:
-      checksum_candidates: ${{ steps.manage.outputs.checksum_candidates }}
-    steps:
-      - name: Require the dedicated automation credential
-        env:
-          AUTOMATION_TOKEN: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
-        run: |
-          if [ -z "$AUTOMATION_TOKEN" ]; then
-            echo "::error::Configure the DEPENDABOT_AUTOMATION_TOKEN repository secret before running maintenance."
-            exit 1
-          fi
-      # Privileged jobs load scripts from the default branch, never a PR.
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-          persist-credentials: false
-      - uses: actions/github-script@v9
-        id: manage
-        with:
-          github-token: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
-          script: |
-            const {manage} = require('./scripts/dependency_automation.cjs');
-            await manage({github, context, core});
-
-  publish-checksums:
-    needs: manage
-    if: needs.manage.outputs.checksum_candidates != '[]' && needs.manage.outputs.checksum_candidates != ''
-    strategy:
-      fail-fast: false
-      matrix:
-        candidate: ${{ fromJSON(needs.manage.outputs.checksum_candidates) }}
+  enable-auto-merge:
+    name: Enable Dependabot auto-merge
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
-      pull-requests: read
-      actions: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-          persist-credentials: false
-      - uses: actions/download-artifact@v4
-        with:
-          name: bridge-checksums
-          path: generated-checksums
-          github-token: ${{ github.token }}
-          run-id: ${{ matrix.candidate.run_id }}
-      - uses: actions/github-script@v9
+      # Never check out or execute PR code in this privileged workflow.
+      # GitHub enforces required checks and branch rules before merging.
+      - name: Enable squash auto-merge
         env:
-          CANDIDATE: ${{ toJSON(matrix.candidate) }}
-        with:
-          github-token: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
-          script: |
-            const fs = require('node:fs');
-            const {publish} = require('./scripts/dependency_automation.cjs');
-            const value = JSON.parse(fs.readFileSync('generated-checksums/bridge_checksums.json', 'utf8'));
-            await publish({github, context, core}, JSON.parse(process.env.CANDIDATE), value);
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash --match-head-commit "$HEAD_SHA"

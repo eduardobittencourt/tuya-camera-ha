@@ -19,7 +19,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const {releaseGate} = require('./scripts/dependency_automation.cjs');
+            const {releaseGate} = require('./scripts/release_gate.cjs');
             await releaseGate({github, context});
       - uses: actions/setup-go@v7
         with:

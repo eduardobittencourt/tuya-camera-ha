@@ -49,38 +49,16 @@ automation never dismisses findings or bypasses the required checks.
 Dependabot checks GitHub Actions, Python and `bridge/` Go dependencies weekly,
 grouping minor/patch version updates per ecosystem and limiting open version-update
 PRs to three per ecosystem. Security alerts and security-update PRs are also enabled.
-Keep Home Assistant and its pytest plugin together for compatibility. The dependency
-maintenance workflow refreshes outdated PR branches and explicitly dispatches CI
-after its own commits. It runs when checks finish, `main` changes,
-hourly and on demand. Conflicts and failing checks still require a fix.
-GitHub can hold PR workflows for approval after a `GITHUB_TOKEN` update. The
-maintainer workflow starts only the known CI and HA validation workflows waiting
-on the exact current head of a same-repository Dependabot PR, with the expected
-GitHub Actions actor and PR association. This starts tests without waiving any
-required result or approving reviews.
+Keep Home Assistant and its pytest plugin together for compatibility. The
+workflow only enables auto-merge using the built-in `GITHUB_TOKEN`; no dedicated
+automation secret is required. It does not refresh branches, approve workflow
+runs or commit generated files. Outdated branches, conflicts, failing checks and
+review findings can require maintainer intervention.
 
-The trusted maintenance and checksum-publication jobs require the Actions secret
-`DEPENDABOT_AUTOMATION_TOKEN`. Use a dedicated fine-grained token restricted to
-this repository, with Actions, Contents, Pull requests and Workflows write access.
-The default `GITHUB_TOKEN` cannot update workflow files during branch refreshes
-and cannot provide unattended approval of its own PR-triggered workflows. Builds
-and ordinary CI never receive the dedicated credential; only scripts checked out
-from `main` use it. Configure the secret before enabling unattended maintenance,
-and rotate it before expiry. Do not reuse a broad personal CLI token without
-explicit maintainer approval.
-Maintenance is triggered from the default branch after check completion, on
-pushes to `main`, hourly or manually; it does not request secrets in a
-Dependabot-triggered `pull_request_target` run.
-
-For PRs changing only Go module files and the binary manifest, an isolated build
-with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,
-without write permissions, secrets or shared build caches. A separate trusted
-workflow validates the originating run, PR head and allowed files, then commits only that manifest,
-then reruns CI. Other bridge changes require the normal manual regeneration.
-Successful builds are recovered by the current PR commit even when a queued
-maintenance trigger is replaced. Failed or cancelled checksum builds retry on
-hourly or manual maintenance runs; completion events do not trigger immediate
-retry loops.
+Go dependency updates that change the bridge binaries require a maintainer to
+regenerate and review `bridge_checksums.json` using Go 1.26.8 and
+`scripts/package_release.py`, then commit it to the PR branch. Until the checksums
+match, the required Go verification blocks the merge.
 No dependency update publishes a release. Compatibility review and real-camera
 validation remain part of [release preparation](docs/releasing.md).
 
