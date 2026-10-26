@@ -1,8 +1,6 @@
 name: Dependabot auto-merge
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
   push:
     branches: [main]
   workflow_run:
@@ -20,7 +18,6 @@ permissions: {}
 
 jobs:
   manage:
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

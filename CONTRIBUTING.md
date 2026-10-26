@@ -51,7 +51,7 @@ grouping minor/patch version updates per ecosystem and limiting open version-upd
 PRs to three per ecosystem. Security alerts and security-update PRs are also enabled.
 Keep Home Assistant and its pytest plugin together for compatibility. The dependency
 maintenance workflow refreshes outdated PR branches and explicitly dispatches CI
-after its own commits. It runs when PRs change, checks finish, `main` changes,
+after its own commits. It runs when checks finish, `main` changes,
 hourly and on demand. Conflicts and failing checks still require a fix.
 GitHub can hold PR workflows for approval after a `GITHUB_TOKEN` update. The
 maintainer workflow starts only the known CI and HA validation workflows waiting
@@ -68,6 +68,9 @@ and ordinary CI never receive the dedicated credential; only scripts checked out
 from `main` use it. Configure the secret before enabling unattended maintenance,
 and rotate it before expiry. Do not reuse a broad personal CLI token without
 explicit maintainer approval.
+Maintenance is triggered from the default branch after check completion, on
+pushes to `main`, hourly or manually; it does not request secrets in a
+Dependabot-triggered `pull_request_target` run.
 
 For PRs changing only Go module files and the binary manifest, an isolated build
 with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,
