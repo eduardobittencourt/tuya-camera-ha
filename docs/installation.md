@@ -64,8 +64,13 @@ Updating files and restarting alone does not migrate an existing account entry.
 
 For a clean reinstall from an earlier version, remove the old integration entry
 in Devices & services, uninstall its files through HACS, then refresh the
-repository and install 0.4.0b2 with beta versions enabled. Restart HA and add
-**Tuya Camera** using the same account/app. Check dashboards and automations
+repository and select 0.4.0b2 with beta versions enabled. HACS can retain the
+former folder/ZIP in its repository cache; uninstall/reinstall alone did not
+clear this on the validated installation. If it still requests the former
+`tuya_camera_bridge` manifest, use the published ZIP following
+[manual installation](#manual-installation) and seek maintainer assistance
+before restoring HACS tracking. Restart HA and add **Tuya Camera** using the
+same account/app. Check dashboards and automations
 against the newly created entity IDs. The old component directory must not be
 left alongside the new one. An operator can instead perform an offline registry
 migration, retaining entry/entity/device IDs; this is not automatic in this beta.
@@ -73,8 +78,13 @@ Downgrading to the former domain also requires a reinstall or an inverse offline
 migration. Selecting an older release in HACS alone does not change account or
 registry domains.
 
-Subsequent updates within the `tuya_camera` domain use the usual HACS update and
-restart procedure. Never reuse a published version for different code.
+If HACS retains the former domain or ZIP, use the manual ZIP fallback above and
+contact the [maintainers](../SUPPORT.md) for assistance before restoring HACS
+tracking. Cache reconciliation and explicit release selection currently require
+maintainer assistance; a general self-service procedure is not provided in this
+beta. Subsequent releases under the same domain should follow the normal
+update/restart path after this cache transition is resolved.
+Never reuse a published version for different code.
 
 Use **Reconfigure** on the integration entry to sign in again and refresh the
 camera list. Recognized session-expiry errors start the HA reauthentication flow.

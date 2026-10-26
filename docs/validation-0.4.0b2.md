@@ -41,3 +41,35 @@ No camera image, video/audio recording, raw protocol payload or credential was
 persisted. This naming change does not expand model compatibility, offline wake
 or battery-endurance claims. The aiortc development pin and other limitations in
 [architecture](architecture.md#dependencies-and-compatibility) still apply.
+
+## Published release and HACS
+
+The release was published from `be857c34efe34d1523edee4fc7b68ecbee4760a7`
+after its exact-commit CI/validation passed. The workflow-produced ZIP and
+checksum matched the candidate build. Stable v0.3.4 remained the stable channel.
+
+HACS initially retained `tuya_camera_bridge` as its component path and read the
+stable 0.3.4 manifest. Uninstalling/reloading did not clear that identity, and an
+uninstalled repository did not retain its beta preference. With HACS disabled,
+only this repository's public cached metadata was reconciled to the installed,
+hash-verified beta and `selected_tag` was set to `v0.4.0b2`. HACS was enabled and
+used to download the official release. The version was explicitly selected
+again through its native API after download. All 44 installed files matched
+that release; no HACS source patch was applied. Selecting beta versions for the
+list alone does not select the manifest HACS reads during this transition.
+
+After a cold Core restart and native HACS refresh, the installed version,
+selected tag and domain remained v0.4.0b2 / v0.4.0b2 / `tuya_camera`. No former
+component directory or account entry reappeared. Account data and entity/device
+binding fingerprints still matched the pre-rename baseline (19 / 17 enabled).
+
+The published installation decoded 703 H.264 video frames and 723 AAC audio
+frames over 63.12 s. Six control calls/restorations passed (0.069–1.472 s).
+Reload took 0.493 s, a fresh JPEG 2.413 s, and the camera returned to standby
+with zero owned media processes. No camera integration warnings/errors or HACS
+errors for this repository were found in the checked post-restart log window.
+
+This HACS cache transition is an operator-assisted beta limitation. Keep the
+explicit beta selection while the stable channel has the former domain, and
+review the repository metadata when selecting another release. Manual ZIP
+installation remains the fallback described in [installation](installation.md).
