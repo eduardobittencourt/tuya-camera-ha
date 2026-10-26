@@ -11,12 +11,13 @@ Restart HA and search for **Tuya Camera Bridge** in Devices & services. For a
 manual install, confirm `manifest.json` is directly inside
 `custom_components/tuya_camera_bridge/`. Check the minimum HA version.
 
-## Bridge download or checksum failure
+## Python dependency installation fails
 
-Install a published release with its matching executable assets. A development
-checkout can reference an unpublished version. Check GitHub access and Linux
-architecture. Do not disable checksum verification or paste an arbitrary binary
-into the integration directory. Raise an issue if published files do not match.
+Version 0.4.x does not download a bridge executable. Check the HA package-install
+error and access to GitHub/Python package indexes. This beta pins an upstream
+aiortc commit supporting HA's PyAV 19; do not downgrade HA's PyAV or bypass its
+constraints. Include the sanitized dependency error and HA version in a report.
+See [dependency details](architecture.md#dependencies-and-compatibility).
 
 ## Login fails or finds no cameras
 
@@ -36,7 +37,7 @@ in the mobile app, then wait for wake-up/connection establishment. The tested
 camera's cold HLS startup was about 15–18 seconds; other devices can differ.
 Check Tuya connectivity and that this model supports mobile WebRTC.
 
-`connection_status: standby` means the bridge is ready; it does not prove the
+`connection_status: standby` means the Python media service is ready; it does not prove the
 camera is reachable. `video` and `last_video_received` report actual received
 packets. `disconnected`/unavailable indicates bridge or detected media failure.
 An old timestamp while idle is not a current connectivity test.

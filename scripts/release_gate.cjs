@@ -1,6 +1,6 @@
 // Require successful CI on the exact commit selected for a draft release.
 async function releaseGate({github, context}) {
-  const workflows = {'ci.yml': ['secrets', 'python', 'go', 'media'],
+  const workflows = {'ci.yml': ['secrets', 'python', 'package', 'media'],
     'validate.yml': ['hassfest', 'hacs']};
   for (const [workflow_id, names] of Object.entries(workflows)) {
     const {data} = await github.rest.actions.listWorkflowRuns({

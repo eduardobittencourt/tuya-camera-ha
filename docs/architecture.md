@@ -1,81 +1,83 @@
 # How it works
 
-The user configures an account in Home Assistant. The integration discovers
-camera devices and manages a Go bridge; viewers use native HA camera entities.
+Starting with 0.4.0b1, all camera protocols execute as Python tasks in the Home
+Assistant integration. No project-specific executable, Go runtime, add-on or
+container is downloaded or supervised. The integration domain remains
+`tuya_camera_bridge` to preserve existing accounts, entities and automations.
 
-```mermaid
-flowchart LR
-    Account[Tuya Smart / Smart Life account] -->|Login and discovery| HA[HA integration]
-    HA -->|Session via stdin| Bridge[Managed Go bridge]
-    Tuya[Tuya API / MQTT signaling] <--> Bridge
-    Camera[Camera] <-->|WebRTC: direct or TURN| Bridge
-    Bridge -->|Loopback RTSP| FFmpeg[On-demand FFmpeg relay]
-    FFmpeg -->|Private HTTP MPEG-TS| Stream[HA stream / HLS]
-    FFmpeg -->|Private HTTP MPEG-TS| RTC[HA go2rtc / WebRTC]
-    Stream --> Viewer[Authenticated HA viewer]
-    RTC --> Viewer
-    FFmpeg --> Snapshot[Fresh JPEG snapshot]
-```
+## Account and media ownership
 
-## Media and processes
+`api.py` and the vendored mobile client handle UI login and device provisioning.
+`media/runtime.py` owns account-scoped camera sessions and a private RTSP server.
+It creates sessions only when FFmpeg requests a camera, shares a session among
+consumers, and closes it when the final consumer disconnects.
 
-The bridge handles the Tuya mobile protocol and presents RTSP on automatically
-allocated loopback ports. A relay starts when media is requested. H.264 video
-is copied; HEVC is decoded and encoded to H.264 at 720p / 15 fps for playback.
-Receive audio is converted to AAC for the HTTP relay and Opus through the native
-HA WebRTC provider. The tested HEVC camera supplies 16-bit PCM audio; the bridge
-converts its sample byte order and preserves RTP sampling timestamps.
+For provisioned protocol-3.3 cameras, `media/lan.py` negotiates command-32 offers
+and candidates over the camera's TCP signaling connection. It performs the
+firmware's LAN connectivity checks, authenticates UDP datagrams with HMAC-SHA1,
+reassembles KCP messages, decrypts AES-CBC media and interprets H.264/PCM frames.
+`media/kcp.py` implements bounded message-mode KCP in Python: reordering,
+deduplication, ACKs, retransmission, receive/send windows and fragmented messages.
+This is a camera transport, not a general-purpose KCP server.
 
-HA's built-in `stream`, FFmpeg integration and go2rtc provider serve the frontend.
-No separate ONVIF service, MediaMTX installation or user-managed RTSP port is
-required. This is a native custom integration with supervised subprocesses; the
-Go executable is installed automatically for Linux amd64/AArch64.
+The same Python session receives scalar DP observations and sends allowlisted
+controls. `lan.py` adapts this session to the entity layer through direct Python
+calls; no HTTP control IPC or second signaling socket is used. Other device
+profiles retain the TinyTuya control path. Periodic DP refreshes remain disabled
+on the shared socket because they interrupted the tested camera's video.
 
-The managed integration does not launch Docker or require a separate container.
-On HA OS, its Go/FFmpeg processes run inside the existing Home Assistant Core
-container. No standalone add-on or Docker image is shipped.
+A sleeping camera may still require Tuya MQTT wake, with WebRTC wake as fallback.
+A LAN negotiation/authentication failure never silently switches playback to
+cloud video. Removing Go does not establish fully offline operation; see
+[offline evidence](offline-operation.md).
 
-## Lifecycle
+Other camera profiles use `media/cloud.py`: the existing mobile API client,
+Paho MQTT and aiortc negotiate WebRTC. H.264 RTP is forwarded through a narrowly
+isolated aiortc receiver hook while preserving normal RTCP/NACK processing.
+Tuya's H.265 variant carries RTP in the `fmp4Stream` datachannel and includes a
+codec/start/recv/complete handshake. Both adapters have synthetic peer tests.
+Retail-model compatibility beyond the tested camera remains unverified.
 
-Each account entry owns its bridge and camera relays. Shutdown, unload and removal
-stop owned processes. Crash recovery restarts the bridge with bounded retry
-delays; an expired session requests UI reauthentication. Camera availability and
-last-video activity help distinguish a connected process from fresh media.
-Snapshots request current video rather than returning an indefinitely cached JPEG.
+## Playback
 
-## Network and trust
+`media/rtsp.py` packages received media as RTP and serves RTSP/TCP only on
+loopback, with random paths and ephemeral ports. It preserves H.264 parameter
+sets, fragments large NAL units and converts local PCM16 to RTP network byte
+order. Each reader has a bounded queue; a stalled reader is disconnected.
 
-The integration also owns [LAN DP connections](local-controls.md)
-for camera settings and telemetry. The local key and schema are provisioned once
-through account setup and persisted privately by HA. Runtime reads, commands,
-reconnection and event handling never fall back to cloud APIs. These connections
-use media activity windows on battery cameras and close during standby.
-For protocol-3.3 cameras with provisioned media credentials, Go shares one
-signaling/DP socket with the local AES/KCP media transport. Python accesses it
-through private loopback IPC, without opening a second camera socket. This path
-accepts spontaneous scalar reports and command confirmations, without periodic
-DP queries or refreshes, which interrupted media on the tested firmware.
-Other cameras retain the TinyTuya control path.
-Settings and telemetry entities are discovered from valid camera observations,
-not schema declarations alone. HA restores timestamped last observations on
-battery models without treating them as fresh command confirmations. Old
-unconfirmed entities are disabled without deleting their registry identities.
+`transcoder.py` starts Home Assistant's FFmpeg on demand. H.264 is copied; H.265
+is converted to H.264 at 720p / 15 fps. Audio is converted to AAC, and snapshots
+are fresh JPEG frames. The private HTTP MPEG-TS relay feeds HA's native Stream
+and go2rtc provider for HLS/WebRTC playback. FFmpeg remains a subprocess; there
+is no separate protocol executable.
 
-Account provisioning requires internet access. The development bridge attempts
-local command-32 signaling first for the verified 3.3 profile. A sleeping camera
-still needs cloud wake (MQTT, with WebRTC wake as fallback). Other profiles keep
-the cloud WebRTC path and may use TURN. This project has not established fully
-offline operation; see [evidence and limits](offline-operation.md).
+## Dependencies and compatibility
 
-The password is transient; HA stores session data in its config entry. Session
-material reaches the bridge through stdin. Release executables are versioned,
-SHA-256 verified and installed atomically. Managed listeners bind to loopback;
-relay paths are random. HA authenticates access to its camera frontend.
+- Vendored `tuya_mobile`: mobile API signing/login, already implemented in Python.
+- TinyTuya: discovery and local controls on profiles without shared LAN media.
+- Paho MQTT: Tuya signaling and wake; TLS certificates remain verified.
+- aiortc/aioice: WebRTC, ICE and STUN, with their normal cryptographic dependencies.
+- HA's FFmpeg/Stream: decoding, snapshots, conversion and frontend delivery.
 
-When talkback is enabled, its UDP RTP/RTCP return channel follows the RTSP
-listener's bind address, including after stream reconnection. Managed mode uses
-`127.0.0.1`, so LAN hosts cannot inject audio through that channel.
+The published aiortc 1.15.0 requires PyAV below 18, incompatible with HA 2026.10's
+PyAV 19. This beta pins the official upstream
+[PyAV compatibility change](https://github.com/aiortc/aiortc/commit/10ccd168528d93996d013d0ecfae679c3a764b68)
+by immutable commit URL. No HA package is downgraded and no dependency constraint
+is bypassed. Replace this development pin with a compatible published aiortc
+release after rerunning dependency and peer/media tests. Installation needs
+access to GitHub and Python package indexes; URL requirements may be rechecked
+by HA at startup. This is a beta limitation, not a zero-dependency claim.
 
-The subprocesses share the HA container's permissions. Loopback listeners are
-not isolation from other processes in that container. Treat HA backups as
-sensitive and see [SECURITY.md](../SECURITY.md).
+## Lifecycle and privacy
+
+Unload and removal cancel owned tasks, close TCP/UDP sockets and listeners, and
+terminate FFmpeg process groups. Camera failures close affected readers; the
+next media request establishes a new session. Authentication errors request UI
+reauthentication. Last video timestamps reflect received media rather than process
+liveness. Battery observations retain their timestamps during standby.
+
+Account sessions and device credentials stay in HA's private config entry and
+Python memory. No account JSON, command-line session argument or subprocess
+stdin contract is needed. HA authenticates remote viewers. Loopback does not
+isolate these listeners from other processes in the same container. Protect
+HA backups and see [SECURITY.md](../SECURITY.md).

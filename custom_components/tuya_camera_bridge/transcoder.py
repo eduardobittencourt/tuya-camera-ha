@@ -5,7 +5,7 @@ import asyncio
 import secrets
 from collections.abc import Callable
 
-from .bridge import stop_process
+from .process import stop_process
 
 
 class FfmpegRelay:

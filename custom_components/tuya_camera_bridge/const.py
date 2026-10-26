@@ -13,13 +13,9 @@ CONF_PHONE_DEVICE_ID = "phone_device_id"
 CONF_CAMERA_ID = "camera_id"
 CONF_CAMERA_NAME = "camera_name"
 CONF_PRODUCT_ID = "product_id"
-CONF_BRIDGE_HOST = "bridge_host"
-CONF_BRIDGE_PORT = "bridge_port"
 
 DEFAULT_APPLICATION = "tuya_smart"
 DEFAULT_COUNTRY_CODE = "55"
-DEFAULT_BRIDGE_HOST = "127.0.0.1"
 
 CONF_CAMERAS = "cameras"
 CONF_TIMEZONE = "timezone"
-MANAGED_VERSION = "0.3.0b1"

@@ -12,13 +12,15 @@ Passwords are transient login inputs and are never persisted. Home Assistant
 stores the authenticated session in its config entry. Treat Home Assistant
 backups and `.storage` as sensitive data.
 
-The managed bridge receives its session via stdin. Executables are pinned by
-version and SHA-256 checksum; replacements use atomic writes with owner-only
-permissions. The bridge and FFmpeg relays bind only loopback, and HTTP streams
-use random paths. They are not sandboxed away from other processes inside the
-same Home Assistant container. Native Home Assistant authentication protects
-remote access.
+All camera protocol sessions run in Python memory inside Home Assistant. Private
+RTSP and FFmpeg HTTP listeners bind only loopback, with random paths. FFmpeg is
+HA's existing executable and shares the container's permissions. These listeners
+are not sandboxed from other processes in that container. Home Assistant
+authentication protects remote access.
 
-Raw bridge stdout/stderr, session fields, signing material, identifiers and
-stream URLs must never be forwarded to integration logs or diagnostics.
-Diagnostics expose only operational state and process counts.
+Raw protocol output, credential-bearing errors, session fields, signing material,
+identifiers and stream URLs must never appear in logs or diagnostics. Diagnostics
+expose operational state, sanitized counters and FFmpeg process counts only.
+Dependencies are declared in the integration manifest; the current beta's aiortc
+upstream commit pin and compatibility limits are documented in
+[architecture](docs/architecture.md).

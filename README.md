@@ -12,17 +12,23 @@
 
 **Connect compatible Tuya Smart and Smart Life cameras from the Home Assistant
 UI.** Sign in with the account used in the mobile app; the integration discovers
-cameras and manages the media bridge automatically.
+cameras and handles their protocols inside the Python integration.
+
+**Development / beta 0.4.0:** the Go executable has been removed. Stable 0.3.4
+keeps its existing architecture; enable beta versions in HACS to test the
+Python migration. See [architecture](docs/architecture.md).
 
 [Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
 [Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
+
+[Python beta validation](docs/validation-0.4.0b1.md)
 
 ## What you get
 
 - Native camera entities, live video with audio, and fresh JPEG snapshots.
 - HLS streaming and WebRTC through Home Assistant's provider.
 - Account login, camera discovery, reconfiguration and session reauthentication.
-- A bridge installed with checksum verification and restarted after a crash.
+- Python-owned signaling, media and session recovery; no protocol executable download.
 - H.264 passthrough; H.265 converted to H.264 at 720p / 15 fps for playback.
 - Setup through the UI: no separate add-on, ONVIF configuration or manual IDs.
 - Schema-driven [LAN camera controls](docs/local-controls.md)
@@ -45,7 +51,7 @@ HACS installation and automatic bridge download have been verified on HA OS
 2026.9.4; see the [stable validation report](docs/validation-0.3.1.md) and
 [original beta validation](docs/validation-0.3.0b1.md).
 
-Requires **Home Assistant 2026.9+ on Linux amd64 or AArch64**, an existing HACS
+Requires **Home Assistant 2026.9+ on Linux**, an existing HACS
 installation, and FFmpeg. Home Assistant OS and Container include FFmpeg;
 other Linux installations must provide a build with H.264/AAC encoding support.
 
@@ -59,10 +65,9 @@ other Linux installations must provide a build with H.264/AAC encoding support.
    and country calling code as the app (`55` for Brazil).
 5. Open a discovered camera and enable sound in the player.
 
-Use a **published release**. A draft release is not downloadable by the public,
-and a development checkout may reference unpublished bridge files. First setup
-and upgrades need GitHub access to download the matching executable. The verified
-cache is reused on later starts. See [installation and migration](docs/installation.md).
+Use a **published release**. A draft release is not downloadable by the public. The 0.4 beta
+needs access to GitHub and Python package indexes for its declared dependencies.
+It does not download an architecture-specific protocol executable. See [installation and migration](docs/installation.md).
 
 Already installed through a custom repository? Keep the existing installation
 and update through HACS as usual; no reinstall or account reconfiguration is needed.
@@ -85,14 +90,15 @@ See the [compatibility table](docs/compatibility.md) and
 
 ## How it runs
 
-The Python integration supervises a small Go subprocess that handles Tuya
-signaling and camera WebRTC. A private RTSP endpoint feeds an on-demand FFmpeg
-relay, which provides H.264/AAC to Home Assistant. These processes run inside
-the HA environment and use CPU/RAM, especially when converting H.265 video.
+All Tuya protocols run as Python tasks inside HA: mobile API access, MQTT wake,
+LAN AES/KCP reception, shared camera controls and cloud WebRTC. A private Python
+RTSP listener feeds the on-demand FFmpeg relay. HA's native media components
+provide authenticated playback. FFmpeg remains responsible for snapshots and
+codec conversion; it is the existing HA executable.
 
-For the tested camera, one HLS viewer used about 120 MiB for bridge plus relay,
-with roughly 65–74% of one CPU core. This excludes the rest of HA and is not a
-guarantee for other cameras or multiple viewers.
+The beta pins an official aiortc development commit for compatibility with HA's
+PyAV 19. This dependency still requires installation access; see the
+[compatibility note](docs/architecture.md#dependencies-and-compatibility).
 
 Read [architecture](docs/architecture.md) for process lifecycle and transport
 choices. The integration is the sole supported installation path.

@@ -1,75 +1,38 @@
 # Preparing a release
 
-A GitHub draft is for maintainer review. HACS users cannot download its assets
-until the release is published. This repository is already included in the
-HACS default catalog; future releases use the existing listing.
+The release contains only the Python integration archive and its SHA-256 checksum.
+No Go build, binary manifest or architecture-specific executable is produced.
 
-## Verify the candidate
+1. Align the version in `manifest.json`, `pyproject.toml` and `__init__.py`.
+2. Run Python lint/tests, synthetic peer and real-media tests, package checks,
+   secret scanning, HACS and hassfest. See [development](development.md).
+3. Run `python scripts/package_release.py` and
+   `python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip`.
+4. Validate the candidate on the real HA, including media/audio, controls,
+   standby, reload and migration with preserved account/entity identities.
+5. Record measured results and remaining limits. Never attach private media,
+   account sessions, stream URLs or device identifiers.
 
-1. Keep versions aligned in `manifest.json`, `pyproject.toml`, the changelog and
-   `bridge_checksums.json`. Review compatibility and security notes.
-2. Use Go 1.26.8 to run `scripts/package_release.py --verify`. An intentional Go
-   change needs a newly generated and reviewed binary manifest first.
-3. Run `scripts/check_repository.py --archive dist/tuya_camera_bridge.zip`.
-   Confirm that the archive contains the integration at its root, branding and
-   all license notices, and that both Linux executables match their SHA-256 pins.
-4. Require green Python, Go race/build, synthetic real-media, secrets,
-   HACS and hassfest checks on the candidate commit.
-5. Review live-camera results and remaining limits. Synthetic success does not
-   certify another retail model. Never attach account data or private media.
+After merging the reviewed candidate, run **Release integration** on the exact
+`main` commit. The release gate requires successful CI (`secrets`, `python`,
+`package`, `media`) and validation (`hassfest`, `hacs`) on that same commit.
+The workflow creates a draft containing `tuya_camera_bridge.zip` and
+`SHA256SUMS`. Versions such as `0.4.0b1` are prereleases. Publishing the draft
+makes it available to HACS users who enable beta versions.
 
-See [development commands](development.md) and the
-[beta validation report](validation-0.3.0b1.md).
+Never replace published assets or reuse a version for different code. Publish
+a new beta for corrections. A beta does not advance the stable release channel.
+Verify installation/update through HACS after publication. Existing entries,
+entity IDs and automations must survive the update; no user keys or YAML are
+required. Rollback uses a previously published version and a Core restart.
 
-## Draft and publish
+The repository is in the HACS default catalog. No new catalog PR is required.
+`hacs.json` selects the ZIP. Branding remains in the integration's `brand/`
+directory. Retain licenses and notices in the archive and follow the
+[HACS publishing requirements](https://www.hacs.dev/docs/publish/start/).
 
-After the candidate is reviewed and merged, run **Release integration** on the
-exact intended commit on `main`. The workflow requires successful CI and HACS/HA
-validation runs, including all six individual jobs, on that exact commit before
-building assets. Pending, failed or skipped checks block draft creation. Dependency
-auto-merge does not replace the compatibility and live-camera review above.
-The workflow builds reproducible assets and creates or
-refreshes a **draft release** for the manifest version (stable for `X.Y.Z`, prerelease for
-versions such as `X.Y.Zb1`). It refuses to replace
-a published release. Review the full target commit, notes and assets:
-
-- `tuya_camera_bridge.zip`
-- `tuya-camera-bridge-linux-amd64`
-- `tuya-camera-bridge-linux-arm64`
-- `SHA256SUMS`
-
-Publishing is a separate maintainer action. Never replace published executables
-or reuse a version for different code: the integration pins executable hashes.
-Use a new version and release for corrections. Only beta releases require enabling prereleases
-in HACS. Stable releases use the normal download flow. After publication, verify a clean install and an upgrade through HACS,
-including automatic executable download, UI login, playback and removal.
-
-For 0.3.0b1, the first HACS download onto the existing beta installation and a
-fresh automatic bridge download were verified after publication. The existing
-account and camera entity were preserved. See the [validation report](validation-0.3.0b1.md).
-This migration check does not represent a blank HA installation or a new account.
-
-## HACS catalog
-
-The repository supports the **custom integration** category and contains one
-integration directory. `hacs.json` selects the release ZIP and hides installation
-from the development/default branch. This avoids installing code whose executable
-assets have not yet been published.
-
-Icons and logos live in the integration's `brand/` directory, supported by HA
-2026.3+ and the current HACS validator. This project's minimum HA is 2026.9;
-an external Home Assistant brands submission is not required for these assets.
-See the [HA announcement](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/).
-
-The repository was accepted into the default catalog in
-[hacs/default#11595](https://github.com/hacs/default/pull/11595) on 2026-10-21.
-New releases do not need another catalog submission. Keep following the
-[HACS publishing requirements](https://www.hacs.dev/docs/publish/start/) and
-[integration requirements](https://www.hacs.dev/docs/publish/integration/), and
-keep repository description, topics, issues and community documentation current.
-
-The [validation workflow](../.github/workflows/validate.yml) runs HACS and hassfest
-on pushes, pull requests, daily and on demand. Review scheduled failures even
-when no code has changed: upstream validators can introduce new requirements.
-After publishing, update the stable-release links and validation report references
-in both READMEs.
+The aiortc dependency currently uses an immutable upstream development commit
+for PyAV 19 compatibility. Verify that HA installs it without changing HA's own
+package pins; see [architecture](architecture.md). Do not publish a stable
+migration release until its dependency and broader compatibility limits have
+been reviewed.

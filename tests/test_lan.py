@@ -445,7 +445,7 @@ async def test_media_controls_share_go_socket_and_confirm_and_restore(hass, batt
         return {"dps": None}
 
     bridge.local_request = AsyncMock(side_effect=request)
-    local.media_bridge = bridge
+    local.media_client = bridge
     with patch("tinytuya.Device", side_effect=AssertionError("A second socket must not open")):
         assert await local._connect()
         await local.write("basic_nightvision", "1")

@@ -14,8 +14,8 @@ failure. TinyTuya implements the encrypted local protocol. Cameras without a
 battery DP keep the persistent heartbeat/status path. Cameras declaring
 `wireless_electricity` use the on-demand lifecycle below.
 
-The verified 3.3 media profile shares Go's signaling socket with controls through
-private loopback IPC. That path uses spontaneous reports and fresh command
+The verified 3.3 media profile shares Python's signaling socket with controls through
+direct in-process calls. That path uses spontaneous reports and fresh command
 confirmations, without UPDATEDPS or periodic status queries: those requests
 interrupted local media on the tested camera. The TinyTuya lifecycle below
 continues to apply to other media profiles. Cloud wake is still required from
@@ -51,7 +51,7 @@ exposed. An enum such as a vendor-specific alarm flag does not prove that it
 means motion, and is not converted into a fabricated motion sensor.
 
 Keys live only in the HA config entry. They are excluded from diagnostics and
-from the Go bridge's stdin payload. Treat HA backups as sensitive. Dependency
+from any separate process configuration. Treat HA backups as sensitive. Dependency
 logging is suppressed for this transport's calls so debug mode cannot dump
 keys or raw camera payloads; other integrations' calls are unaffected.
 

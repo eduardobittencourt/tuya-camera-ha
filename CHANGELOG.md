@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0b1 — Python media migration (beta)
+
+- Move Tuya LAN signaling, AES/KCP media reception, MQTT wake and WebRTC into
+  Python tasks owned by the integration. Remove the Go source tree, executable
+  download/cache, binary manifest and HTTP control IPC.
+- Share one Python LAN signaling/DP socket; retain TinyTuya for other control
+  profiles, and preserve existing accounts, entity IDs and automations.
+- Keep HA's existing FFmpeg for snapshots and codec adaptation. Release assets
+  are now a Python HACS ZIP and its checksum, without architecture builds.
+- Add corruption/loss/reordering/lifecycle tests, synthetic Tuya AES/KCP media,
+  H.264 WebRTC and H.265/datachannel peer tests; use a Python WebRTC test probe.
+- Pin the official upstream aiortc PyAV-19 compatibility commit for this beta.
+  A compatible published aiortc release and wider retail-camera coverage remain
+  prerequisites for a stable migration release.
+
+See [beta validation](docs/validation-0.4.0b1.md) for actual results and limits.
+
+
 ## Unreleased
 
 - Avoid duplicate branch-push/PR validation runs, cancel superseded runs, cache
