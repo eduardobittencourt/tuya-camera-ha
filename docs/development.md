@@ -10,7 +10,7 @@ python3.14 -m venv .venv
 pip install -e '.[test]'
 ruff check custom_components tests scripts
 python scripts/check_repository.py
-node --test tests/test_dependency_automation.cjs
+node --test tests/test_release_gate.cjs
 pytest -m 'not media'
 ```
 
