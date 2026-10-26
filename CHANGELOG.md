@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0b2 — Tuya Camera naming (beta)
+
+- Rename the product to Tuya Camera, integration domain/directory to `tuya_camera`,
+  and release archive to `tuya_camera.zip`. Remove Bridge from current UI text.
+- Keep Python protocols, TinyTuya and media behavior unchanged.
+- This beta changes the HA integration identity. Existing `tuya_camera_bridge`
+  installations need the migration/reinstallation procedure in
+  [installation](docs/installation.md); a restart alone cannot migrate registries.
+- Validate the renamed package with 73 Python tests, three synthetic-media tests
+  and the existing real camera; see [results](docs/validation-0.4.0b2.md).
+
 ## 0.4.0b1 — Python media migration (beta)
 
 - Move Tuya LAN signaling, AES/KCP media reception, MQTT wake and WebRTC into

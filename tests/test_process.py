@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from custom_components.tuya_camera_bridge.process import stop_process
+from custom_components.tuya_camera.process import stop_process
 
 
 async def test_cancelled_stop_kills_and_reaps_process_ignoring_sigterm():

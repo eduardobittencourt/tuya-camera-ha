@@ -7,7 +7,7 @@ No Go build, binary manifest or architecture-specific executable is produced.
 2. Run Python lint/tests, synthetic peer and real-media tests, package checks,
    secret scanning, HACS and hassfest. See [development](development.md).
 3. Run `python scripts/package_release.py` and
-   `python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip`.
+   `python scripts/check_repository.py --archive dist/tuya_camera.zip`.
 4. Validate the candidate on the real HA, including media/audio, controls,
    standby, reload and migration with preserved account/entity identities.
 5. Record measured results and remaining limits. Never attach private media,
@@ -16,7 +16,7 @@ No Go build, binary manifest or architecture-specific executable is produced.
 After merging the reviewed candidate, run **Release integration** on the exact
 `main` commit. The release gate requires successful CI (`secrets`, `python`,
 `package`, `media`) and validation (`hassfest`, `hacs`) on that same commit.
-The workflow creates a draft containing `tuya_camera_bridge.zip` and
+The workflow creates a draft containing `tuya_camera.zip` and
 `SHA256SUMS`. Versions such as `0.4.0b1` are prereleases. Publishing the draft
 makes it available to HACS users who enable beta versions.
 

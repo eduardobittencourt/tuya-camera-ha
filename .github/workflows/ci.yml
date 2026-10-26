@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/package_release.py
-      - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
+      - run: python3 scripts/check_repository.py --archive dist/tuya_camera.zip
       - uses: actions/upload-artifact@v4
         with:
           name: python-integration

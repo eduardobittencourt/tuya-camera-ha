@@ -1,6 +1,6 @@
-"""Constants for Tuya Camera Bridge."""
+"""Constants for Tuya Camera."""
 
-DOMAIN = "tuya_camera_bridge"
+DOMAIN = "tuya_camera"
 
 CONF_APPLICATION = "application"
 CONF_COUNTRY_CODE = "country_code"

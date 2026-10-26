@@ -1,6 +1,6 @@
 [project]
 name = "tuya-camera-ha"
-version = "0.4.0b1"
+version = "0.4.0b2"
 description = "Python Tuya camera integration for Home Assistant"
 requires-python = ">=3.14"
 
@@ -12,7 +12,7 @@ markers = ["media: real FFmpeg/RTSP end-to-end tests with a synthetic camera"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = [".", "custom_components/tuya_camera_bridge/vendor"]
+pythonpath = [".", "custom_components/tuya_camera/vendor"]
 
 [tool.ruff]
 line-length = 120
@@ -22,7 +22,7 @@ target-version = "py311"
 select = ["E4", "E7", "E9", "F", "I", "UP", "SIM", "PERF", "PLW", "RUF", "BLE"]
 
 [tool.ruff.lint.per-file-ignores]
-"custom_components/tuya_camera_bridge/vendor/**" = ["ALL"]
+"custom_components/tuya_camera/vendor/**" = ["ALL"]
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -32,4 +32,4 @@ build-backend = "setuptools.build_meta"
 include = ["custom_components*"]
 
 [tool.setuptools.package-data]
-"custom_components.tuya_camera_bridge" = ["*.json", "translations/*.json", "vendor/TUYA_MOBILE_LICENSE", "brand/*.png", "BRAND_ASSETS.md"]
+"custom_components.tuya_camera" = ["*.json", "translations/*.json", "vendor/TUYA_MOBILE_LICENSE", "brand/*.png", "BRAND_ASSETS.md"]

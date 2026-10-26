@@ -1,6 +1,6 @@
 # Contributor guidance
 
-The primary product is `custom_components/tuya_camera_bridge`: a UI-driven Home
+The primary product is `custom_components/tuya_camera`: a UI-driven Home
 Assistant integration. All Tuya account, signaling, LAN media and WebRTC protocol
 code runs in Python inside the integration. Do not reintroduce a Go bridge,
 standalone add-on, Docker image, ONVIF gateway or credential-managing CLI.
@@ -20,7 +20,8 @@ secrets. Never log raw protocol output or credential-bearing errors.
 
 Run Python lint/tests, package checks and real synthetic-camera media tests
 before release. Build the Python-only HACS archive with
-`scripts/package_release.py`. Preserve the integration domain, account config
-and entity unique IDs when migrating existing installations. The aiortc raw RTP
-adapter is version-sensitive: run its synthetic H.264 and H.265/datachannel peer
+`scripts/package_release.py`. The domain is `tuya_camera` starting with 0.4.0b2.
+Preserve account config and entity unique IDs during explicitly authorized
+migrations. The aiortc raw RTP adapter is version-sensitive: run its synthetic
+H.264 and H.265/datachannel peer
 tests when updating the pinned upstream dependency.

@@ -2,7 +2,7 @@ import asyncio
 import json
 from unittest.mock import AsyncMock
 
-from custom_components.tuya_camera_bridge.api import CameraInfo, TuyaCameraApi
+from custom_components.tuya_camera.api import CameraInfo, TuyaCameraApi
 
 
 class FakeClient:
@@ -77,7 +77,7 @@ async def test_media_provisioning_caches_only_device_password_and_reuses_it():
             "cameras": [{"camera_id": "camera", "local": {"local_key": "test-lan-key1234", "schema": []}}]}
     from unittest.mock import patch
 
-    with patch("custom_components.tuya_camera_bridge.api.TuyaPasswordClient.for_application", return_value=client):
+    with patch("custom_components.tuya_camera.api.TuyaPasswordClient.for_application", return_value=client):
         cameras = await TuyaCameraApi(None).async_prepare_local_media(data)
         assert cameras[0]["local"] == {"local_key": "test-lan-key1234", "schema": [], "media_password": "test-media"}
         assert data["cameras"][0]["local"].get("media_password") is None

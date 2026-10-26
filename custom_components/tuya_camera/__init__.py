@@ -22,7 +22,7 @@ from .media.cloud import MediaAuthenticationError, MediaError
 from .media.runtime import MediaRuntime
 from .transcoder import FfmpegRelay
 
-VERSION = "0.4.0b1"
+VERSION = "0.4.0b2"
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.CAMERA, Platform.SWITCH, Platform.SELECT, Platform.NUMBER,
              Platform.SENSOR, Platform.BINARY_SENSOR]

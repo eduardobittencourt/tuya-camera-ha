@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../custom_components/tuya_camera_bridge/brand/logo.png" alt="Tuya" width="220">
+  <img src="../custom_components/tuya_camera/brand/logo.png" alt="Tuya" width="220">
 </p>
 
-# Tuya Camera Bridge para Home Assistant
+# Tuya Camera para Home Assistant
 
 [![HACS padrão](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/default/blob/master/integration)
 
@@ -17,7 +17,7 @@ migração; veja a [arquitetura](architecture.md).
 [English](../README.md) · [Instalação detalhada](installation.md) ·
 [Compatibilidade](compatibility.md) · [Resolução de problemas](troubleshooting.md)
 
-[Validação da beta Python](validation-0.4.0b1.md)
+[Validação da beta Python](validation-0.4.0b1.md) · [Validação da troca de nome](validation-0.4.0b2.md)
 
 ## O que funciona
 
@@ -66,11 +66,15 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
 [![Abrir no HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-1. Abra o **HACS** e procure **Tuya Camera Bridge**.
+O novo nome/domínio vale a partir da **0.4.0b2**, disponível com versões beta
+habilitadas. Releases anteriores aparecem como **Tuya Camera Bridge**. Para trocar
+uma instalação existente, siga o [procedimento de mudança de domínio](installation.md#updates-and-rediscovery).
+
+1. Abra o **HACS** e procure **Tuya Camera**.
 2. Abra o repositório, baixe a versão estável mais recente e reinicie o HA.
    Não é preciso habilitar versões beta.
 3. Vá a **Configurações → Dispositivos e serviços → Adicionar integração** e
-   procure **Tuya Camera Bridge**.
+   procure **Tuya Camera**.
 4. Escolha Tuya Smart ou Smart Life e informe a conta, a senha e o código de
    país usados no aplicativo. Para o Brasil, use `55`.
 5. Abra a câmera e ative o som no player.

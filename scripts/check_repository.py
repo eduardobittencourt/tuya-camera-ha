@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPONENT = ROOT / "custom_components" / "tuya_camera_bridge"
+COMPONENT = ROOT / "custom_components" / "tuya_camera"
 REQUIRED = (
     "README.md", "LICENSE", "NOTICE", "SECURITY.md", "SUPPORT.md", "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md",
@@ -55,6 +55,8 @@ def check_repository() -> dict:
             "Runtime version differs from manifest")
     integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / "manifest.json").exists()]
     require(integrations == [COMPONENT], "HACS repository must contain exactly one integration")
+    require(not (ROOT / "custom_components" / "tuya_camera_bridge").exists(),
+            "The former integration directory must not remain alongside tuya_camera")
     require(not (ROOT / "bridge").exists(), "The integration must own all camera protocols in Python")
     require(not (ROOT / "repository.yaml").exists()
             and not (ROOT / "tuya-camera-bridge-addon").exists(),
@@ -65,7 +67,7 @@ def check_repository() -> dict:
     require(catalog_manifests == [COMPONENT / "manifest.json"],
             "HACS catalog discovery must find only the integration manifest")
     require(manifest["domain"] == COMPONENT.name, "Integration domain differs from its directory")
-    require(hacs["zip_release"] and hacs["filename"] == "tuya_camera_bridge.zip",
+    require(hacs["zip_release"] and hacs["filename"] == "tuya_camera.zip",
             "HACS release ZIP configuration is incorrect")
     require(hacs["hide_default_branch"], "Development branch must not bypass release assets")
     require(manifest["codeowners"] and manifest["issue_tracker"] and manifest["documentation"],

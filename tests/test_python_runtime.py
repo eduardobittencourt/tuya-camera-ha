@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.tuya_camera_bridge.config_flow import entry_data
-from custom_components.tuya_camera_bridge.media.rtsp import MediaSource, RtspServer
-from custom_components.tuya_camera_bridge.media.runtime import MediaRuntime
+from custom_components.tuya_camera.config_flow import entry_data
+from custom_components.tuya_camera.media.rtsp import MediaSource, RtspServer
+from custom_components.tuya_camera.media.runtime import MediaRuntime
 
 from .test_config_flow import LOGIN
 

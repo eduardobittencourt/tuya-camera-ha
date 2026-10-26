@@ -8,7 +8,7 @@ from aiortc import AudioStreamTrack, RTCConfiguration, RTCPeerConnection, RTCSes
 from aiortc.rtp import RtpPacket
 from aiortc.sdp import candidate_from_sdp
 
-from custom_components.tuya_camera_bridge.media.cloud import CloudSession, ice_servers
+from custom_components.tuya_camera.media.cloud import CloudSession, ice_servers
 
 
 @pytest.fixture(autouse=True)

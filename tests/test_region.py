@@ -1,4 +1,4 @@
-from custom_components.tuya_camera_bridge.region import endpoint_for_country_code
+from custom_components.tuya_camera.region import endpoint_for_country_code
 
 
 def test_brazil_routes_to_american_data_center():

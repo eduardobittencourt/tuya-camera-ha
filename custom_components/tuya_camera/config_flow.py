@@ -72,7 +72,7 @@ def entry_data(login: LoginResult) -> dict:
     }
 
 
-class TuyaCameraBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class TuyaCameraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """One entry per Tuya account, with all discovered cameras."""
 
     VERSION = 2

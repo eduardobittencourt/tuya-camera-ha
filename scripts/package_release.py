@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPONENT = ROOT / "custom_components" / "tuya_camera_bridge"
+COMPONENT = ROOT / "custom_components" / "tuya_camera"
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
     args = parser.parse_args()
     version = json.loads((COMPONENT / "manifest.json").read_text())["version"]
     args.output.mkdir(parents=True, exist_ok=True)
-    target = args.output / "tuya_camera_bridge.zip"
+    target = args.output / "tuya_camera.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         files = {
             path.relative_to(COMPONENT).as_posix(): path
