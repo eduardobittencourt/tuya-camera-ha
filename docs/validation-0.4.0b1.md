@@ -6,7 +6,7 @@ IDs. It does not promise universal model support or fully offline operation.
 
 ## Automated validation
 
-71 Python tests and three actual synthetic-media tests passed.
+72 Python tests and three actual synthetic-media tests passed.
 The Python 3.14 test environment uses HA 2026.10.2, its matching pytest plugin
 0.13.373 and PyAV 19.0.2. Ruff, Python dependency consistency and deterministic
 archive checks pass. Protocol tests cover signal framing and corruption,

@@ -27,6 +27,11 @@ async def stop_process(process: asyncio.subprocess.Process) -> None:
     try:
         try:
             await asyncio.wait_for(process.wait(), STOP_TIMEOUT)
+        except asyncio.CancelledError:
+            with suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+            await process.wait()
+            raise
         except TimeoutError:
             with suppress(ProcessLookupError):
                 os.killpg(process.pid, signal.SIGKILL)
