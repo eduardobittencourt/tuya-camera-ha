@@ -14,7 +14,7 @@ manual install, confirm `manifest.json` is directly inside
 ## Python dependency installation fails
 
 Version 0.4.x does not download a bridge executable. Check the HA package-install
-error and access to GitHub/Python package indexes. This beta pins an upstream
+error and access to GitHub/Python package indexes. Version 0.4.0 pins an upstream
 aiortc commit supporting HA's PyAV 19; do not downgrade HA's PyAV or bypass its
 constraints. Include the sanitized dependency error and HA version in a report.
 See [dependency details](architecture.md#dependencies-and-compatibility).

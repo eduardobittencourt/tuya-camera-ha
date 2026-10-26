@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — Stable Python integration
+
+- Promote the validated Python runtime and Tuya Camera name/domain to the stable
+  release channel after real-camera beta use and owner acceptance. No protocol
+  or dependency changes from 0.4.0b2; TinyTuya is retained.
+- Publish `tuya_camera.zip` for normal HACS installation without beta versions.
+  Installations already on `tuya_camera` keep account/entity/device identities.
+- Legacy `tuya_camera_bridge` installations still require explicit migration or
+  reinstall; the HACS cached-path fallback and maintainer assistance remain
+  documented. Remove the old beta selection after moving to stable 0.4.0.
+- Retain the immutable official aiortc PyAV-19 compatibility commit; the published
+  aiortc 1.15.0 remains incompatible with HA PyAV 19. Existing model, offline-wake
+  and battery-endurance limits remain. See [validation](docs/validation-0.4.0.md).
+
 ## 0.4.0b2 — Tuya Camera naming (beta)
 
 - Rename the product to Tuya Camera, integration domain/directory to `tuya_camera`,

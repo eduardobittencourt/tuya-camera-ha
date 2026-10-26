@@ -14,14 +14,14 @@
 UI.** Sign in with the account used in the mobile app; the integration discovers
 cameras and handles their protocols inside the Python integration.
 
-**Development / beta 0.4.0:** the Go executable has been removed. Stable 0.3.4
-keeps its existing architecture; enable beta versions in HACS to test the
-Python migration. See [architecture](docs/architecture.md).
+**Stable 0.4.0:** camera protocols run in Python inside the integration. The Go
+executable has been removed. Beta versions do not need to be enabled in HACS.
+See [architecture](docs/architecture.md).
 
 [Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
 [Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
 
-[Python beta validation](docs/validation-0.4.0b1.md) · [Rename beta validation](docs/validation-0.4.0b2.md)
+[Stable validation](docs/validation-0.4.0.md) · [Python migration validation](docs/validation-0.4.0b1.md) · [Domain migration validation](docs/validation-0.4.0b2.md)
 
 ## What you get
 
@@ -39,17 +39,16 @@ camera model and firmware. Internet is required for Tuya authentication and
 signaling; media can travel directly or through TURN. This project does not
 promise offline/local-only operation or compatibility with every Tuya camera.
 PTZ, two-way audio and interactive MFA/captcha are not supported. Local controls
-do not make the existing media bridge fully offline.
+do not establish fully offline operation; sleeping cameras may still need cloud wake.
 
 ## Install with HACS
 
 Available in the **HACS default catalog**. No custom repository is needed.
 
-Published release: [0.3.4](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.3.4).
-See the [0.3.4 validation and publication report](docs/validation-0.3.4.md).
-HACS installation and automatic bridge download have been verified on HA OS
-2026.9.4; see the [stable validation report](docs/validation-0.3.1.md) and
-[original beta validation](docs/validation-0.3.0b1.md).
+Stable release: [0.4.0](https://github.com/eduardobittencourt/tuya-camera-ha/releases/tag/v0.4.0).
+See the [stable validation report](docs/validation-0.4.0.md). The Python runtime
+and renamed package were validated through HACS on HA Core 2026.10.4 before
+promotion; see the [measured results](docs/validation-0.4.0b2.md).
 
 Requires **Home Assistant 2026.9+ on Linux**, an existing HACS
 installation, and FFmpeg. Home Assistant OS and Container include FFmpeg;
@@ -57,32 +56,30 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-The new name/domain applies to **0.4.0b2 and later**. Enable beta versions for
-this release. Earlier releases appear as **Tuya Camera Bridge**; existing users
+The new name/domain applies to **0.4.0b2 and later**, including stable **0.4.0**.
+Earlier releases appear as **Tuya Camera Bridge**; existing users
 must follow the [domain change procedure](docs/installation.md#updates-and-rediscovery).
 
 1. Open **HACS** and search for **Tuya Camera**.
-2. Choose the release: stable **0.3.x** uses **Tuya Camera Bridge**; enable beta
-   versions and select **0.4.0b2** for **Tuya Camera**. Download and restart HA.
-3. Open **Settings → Devices & services → Add integration** and select
-   **Tuya Camera Bridge** for stable 0.3.x, or **Tuya Camera** for beta 0.4.0b2.
+2. Download the latest stable **0.4.0** release and restart HA.
+3. Open **Settings → Devices & services → Add integration → Tuya Camera**.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
    and country calling code as the app (`55` for Brazil).
 5. Open a discovered camera and enable sound in the player.
 
-Use a **published release**. A draft release is not downloadable by the public. The 0.4 beta
+Use a **published release**. A draft release is not downloadable by the public. Version 0.4
 needs access to GitHub and Python package indexes for its declared dependencies.
 It does not download an architecture-specific protocol executable. See [installation and migration](docs/installation.md).
 
 Already installed under `tuya_camera_bridge`, including through a custom
 repository? Follow the [domain change procedure](docs/installation.md#updates-and-rediscovery)
-before switching to 0.4.0b2. Ordinary HACS updates apply within the same domain.
+before switching to 0.4.0. Ordinary HACS updates apply within the same domain.
 
 ## Tested cameras
 
 **Positivo Casa Inteligente Smart Câmera Wi-Fi com Bateria (11188736), firmware
 1.1.48**, tested using Tuya Smart, has passed live video, audio, snapshots,
-automatic bridge recovery and playback on the owner's phone. The owner identified
+session recovery and playback on the owner's phone. The owner identified
 the model from its [manufacturer listing](https://www.positivocasainteligente.com.br/smart-camera-bateria-wifi-11188736/p).
 Battery endurance and long idle/wake cycles have not been measured. This is one
 tested unit, not a guarantee for every firmware or other Tuya camera.
@@ -102,8 +99,8 @@ RTSP listener feeds the on-demand FFmpeg relay. HA's native media components
 provide authenticated playback. FFmpeg remains responsible for snapshots and
 codec conversion; it is the existing HA executable.
 
-The beta pins an official aiortc development commit for compatibility with HA's
-PyAV 19. This dependency still requires installation access; see the
+Version 0.4.0 retains the tested official aiortc development commit for
+compatibility with HA's PyAV 19. This dependency still requires installation access; see the
 [compatibility note](docs/architecture.md#dependencies-and-compatibility).
 
 Read [architecture](docs/architecture.md) for process lifecycle and transport
