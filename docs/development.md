@@ -51,6 +51,19 @@ Run pytest from the repository root. Keep downloaded tools and investigation
 artifacts under `~/research/tuya-camera-ha/`, outside the release payload.
 
 The [CI workflow](../.github/workflows/ci.yml) shows exact downloads and checksums.
+Its media job uses the checksum-pinned Linux x86_64 `imageio-ffmpeg` wheel in
+[`requirements-media.txt`](../requirements-media.txt), which bundles FFmpeg 7.0.2.
+This avoids an APT update/install on each runner. It is test tooling only;
+the integration continues to use Home Assistant's FFmpeg. Python downloads are
+cached, external media-tool downloads have bounded retries, and the media job
+has a ten-minute limit, including setup. Both codec cases still exercise actual
+FFmpeg, HLS, WebRTC, audio, snapshots and source loss on every PR.
+
+CI runs on pull requests and pushes to `main`, avoiding duplicate branch-push
+and PR runs. New commits cancel superseded runs for the same PR. Maintainers
+can also run CI manually on a branch before opening a PR.
+Build artifacts expire after seven days to limit retained CI storage.
+
 It also scans secrets. The separate
 [validation workflow](../.github/workflows/validate.yml) runs official hassfest
 and HACS validators without skipped checks on pushes, pull requests, daily and
