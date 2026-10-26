@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
   workflow_run:
-    workflows: [CI, HACS and Home Assistant validation]
+    workflows: [CI, HACS and Home Assistant validation, Dependabot bridge checksums]
     types: [completed]
   schedule:
     - cron: "43 * * * *"
@@ -28,7 +28,7 @@ jobs:
       pull-requests: write
       actions: write
     outputs:
-      builds: ${{ steps.manage.outputs.builds }}
+      checksum_candidate: ${{ steps.manage.outputs.checksum_candidate }}
     steps:
       # Privileged jobs load scripts from the default branch, never a PR.
       - uses: actions/checkout@v4
@@ -42,41 +42,9 @@ jobs:
             const {manage} = require('./scripts/dependency_automation.cjs');
             await manage({github, context, core});
 
-  checksums:
-    needs: manage
-    if: needs.manage.outputs.builds != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        pr: ${{ fromJSON(needs.manage.outputs.builds) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      # Isolated build: no secrets, persisted credentials or shared build cache.
-      # manage allows only go.mod, go.sum and the checksum manifest to differ.
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ matrix.pr.sha }}
-          persist-credentials: false
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.8"
-          cache: false
-      - run: python3 scripts/package_release.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: checksums-${{ matrix.pr.number }}
-          path: custom_components/tuya_camera_bridge/bridge_checksums.json
-          retention-days: 1
-
   publish-checksums:
-    needs: [manage, checksums]
-    strategy:
-      fail-fast: false
-      matrix:
-        pr: ${{ fromJSON(needs.manage.outputs.builds) }}
+    needs: manage
+    if: needs.manage.outputs.checksum_candidate != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -90,11 +58,13 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: checksums-${{ matrix.pr.number }}
+          name: bridge-checksums
           path: generated-checksums
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
       - uses: actions/github-script@v9
         env:
-          CANDIDATE: ${{ toJSON(matrix.pr) }}
+          CANDIDATE: ${{ needs.manage.outputs.checksum_candidate }}
         with:
           script: |
             const fs = require('node:fs');

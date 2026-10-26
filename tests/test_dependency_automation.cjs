@@ -1,6 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {eligible, goOnly, validateManifest, dispatchChecks, publish, releaseGate} =
+const {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
+  checksumCandidate, publish, releaseGate} =
   require('../scripts/dependency_automation.cjs');
 
 const repository = 'owner/camera';
@@ -59,6 +60,44 @@ test('dispatches only missing workflows and pins lookup to the current head', as
   }}};
   await dispatchChecks(github, context.repo, 'dependabot/update', true, 'sha');
   assert.deepEqual(calls.map(c => [c.workflow_id, c.ref]), [['validate.yml', 'dependabot/update']]);
+});
+
+test('checksum builds dispatch on the PR branch and do not duplicate existing runs', async () => {
+  const calls = [];
+  let count = 0;
+  const github = {rest: {actions: {
+    listWorkflowRuns: async args => {
+      assert.equal(args.head_sha, 'old');
+      return {data: {total_count: count}};
+    },
+    createWorkflowDispatch: async args => calls.push(args),
+  }}};
+  await dispatchChecksumBuild(github, context.repo, pr());
+  count = 1;
+  await dispatchChecksumBuild(github, context.repo, pr());
+  assert.deepEqual(calls.map(c => [c.workflow_id, c.ref]),
+    [['dependency-checksums.yml', 'dependabot/go_modules/update']]);
+});
+
+test('privileged publication rejects foreign, failed, forged and stale build runs', async () => {
+  const original = {conclusion: 'success', head_repository: {full_name: repository},
+    event: 'workflow_dispatch', workflow_id: 123, head_sha: 'old', head_branch: pr().head.ref};
+  let files = [{filename: 'bridge/go.mod', status: 'modified'}];
+  const github = {rest: {
+    actions: {getWorkflow: async () => ({data: {id: 123}})},
+    pulls: {list() {}, listFiles() {}, get: async () => ({data: {...pr(), number: 10}})},
+  }, paginate: async fn => fn === github.rest.pulls.list ? [{number: 10}] : files};
+  const options = {github, context: {...context, payload: {workflow_run: original}}};
+  assert.deepEqual(await checksumCandidate(options.github, options.context), candidate);
+  for (const change of [run => run.conclusion = 'failure', run => run.workflow_id = 456,
+    run => run.head_sha = 'stale', run => run.event = 'push',
+    run => run.head_repository = {full_name: 'fork/camera'}]) {
+    const run = {...original};
+    change(run);
+    assert.equal(await checksumCandidate(github, {...context, payload: {workflow_run: run}}), null);
+  }
+  files.push({filename: 'scripts/package_release.py', status: 'modified'});
+  assert.equal(await checksumCandidate(options.github, options.context), null);
 });
 
 test('stale build results cannot write to a changed or closed PR', async () => {

@@ -38,6 +38,41 @@ async function dispatchChecks(github, repo, branch, onlyMissing = false, sha = '
   }
 }
 
+async function dispatchChecksumBuild(github, repo, pr) {
+  const workflow_id = 'dependency-checksums.yml';
+  const {data} = await github.rest.actions.listWorkflowRuns({
+    ...repo, workflow_id, head_sha: pr.head.sha, per_page: 1,
+  });
+  if (!data.total_count) {
+    // Runs in the PR branch's security/cache context, never the default branch's.
+    await github.rest.actions.createWorkflowDispatch({...repo, workflow_id, ref: pr.head.ref});
+  }
+}
+
+async function checksumCandidate(github, context) {
+  const run = context.payload?.workflow_run;
+  const repository = `${context.repo.owner}/${context.repo.repo}`;
+  if (!run || run.conclusion !== 'success' || run.head_repository?.full_name !== repository
+      || !['pull_request', 'workflow_dispatch'].includes(run.event)) return null;
+  const {data: workflow} = await github.rest.actions.getWorkflow({
+    ...context.repo, workflow_id: 'dependency-checksums.yml',
+  });
+  if (run.workflow_id !== workflow.id) return null;
+  const prs = await github.paginate(github.rest.pulls.list, {
+    ...context.repo, state: 'open', base: 'main', head: `${context.repo.owner}:${run.head_branch}`,
+    per_page: 100,
+  });
+  for (const entry of prs) {
+    const {data: pr} = await github.rest.pulls.get({...context.repo, pull_number: entry.number});
+    if (!eligible(pr, repository) || pr.head.sha !== run.head_sha) continue;
+    const files = await github.paginate(github.rest.pulls.listFiles, {
+      ...context.repo, pull_number: pr.number, per_page: 100,
+    });
+    if (goOnly(files)) return {number: pr.number, sha: run.head_sha};
+  }
+  return null;
+}
+
 async function needsChecksums(github, repo, pr, files) {
   if (!goOnly(files)) return false;
   if (!files.some(f => f.filename === CHECKSUM_PATH)) return true;
@@ -62,7 +97,8 @@ async function manage({github, context, core}) {
   const prs = await github.paginate(github.rest.pulls.list, {
     ...repo, state: 'open', base: 'main', sort: 'created', direction: 'asc', per_page: 100,
   });
-  const builds = [];
+  const candidate = await checksumCandidate(github, context);
+  core.setOutput('checksum_candidate', candidate ? JSON.stringify(candidate) : '');
   for (const entry of prs) {
     if (entry.user.login !== 'dependabot[bot]') continue;
     const {data: pr} = await github.rest.pulls.get({...repo, pull_number: entry.number});
@@ -103,7 +139,7 @@ async function manage({github, context, core}) {
       const {data: current} = await github.rest.pulls.get({...repo, pull_number: pr.number});
       if (current.head.sha !== pr.head.sha) continue;
       if (await needsChecksums(github, repo, pr, files)) {
-        builds.push({number: pr.number, sha: pr.head.sha, branch: pr.head.ref});
+        await dispatchChecksumBuild(github, repo, pr);
       } else {
         await dispatchChecks(github, repo, pr.head.ref, true, pr.head.sha);
       }
@@ -118,7 +154,6 @@ async function manage({github, context, core}) {
   }
   const {data: latest} = await github.rest.repos.getBranch({...repo, branch: 'main'});
   await dispatchChecks(github, repo, 'main', true, latest.commit.sha);
-  core.setOutput('builds', JSON.stringify(builds));
 }
 
 async function publish({github, context, core}, candidate, value) {
@@ -176,4 +211,5 @@ async function releaseGate({github, context}) {
   }
 }
 
-module.exports = {eligible, goOnly, validateManifest, dispatchChecks, manage, publish, releaseGate};
+module.exports = {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
+  checksumCandidate, manage, publish, releaseGate};

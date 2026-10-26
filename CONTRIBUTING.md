@@ -55,8 +55,9 @@ after its own commits. It runs when PRs change, checks finish, `main` changes,
 hourly and on demand. Conflicts and failing checks still require a fix.
 
 For PRs changing only Go module files and the binary manifest, an isolated build
-with Go 1.26.8 regenerates checksums without write permissions, secrets or shared
-build caches. A separate trusted job validates and commits only that manifest,
+with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,
+without write permissions, secrets or shared build caches. A separate trusted
+workflow validates the originating run, PR head and allowed files, then commits only that manifest,
 then reruns CI. Other bridge changes require the normal manual regeneration.
 No dependency update publishes a release. Compatibility review and real-camera
 validation remain part of [release preparation](docs/releasing.md).
