@@ -6,6 +6,7 @@ IDs. It does not promise universal model support or fully offline operation.
 
 ## Automated validation
 
+70 Python tests and three actual synthetic-media tests passed.
 The Python 3.14 test environment uses HA 2026.10.2, its matching pytest plugin
 0.13.373 and PyAV 19.0.2. Ruff, Python dependency consistency and deterministic
 archive checks pass. Protocol tests cover signal framing and corruption,
@@ -28,7 +29,8 @@ on HA OS / Core 2026.10.4, Linux amd64. These are measurements from one unit.
   entities, with no new account login or manually entered credentials.
 - First Python LAN snapshot returned a valid JPEG in 7.143 seconds.
 - LAN HLS decoded 730 video frames and 751 audio frames over 61.20 seconds;
-  the delivered codecs were H.264 and AAC.
+  the delivered codecs were H.264 and AAC. A repeat on the final runtime decoded
+  732 video / 753 audio frames over 62.55 seconds.
 - Six native HA service calls confirmed night vision, PIR and sensitivity
   changes and restoration of their original values. The first cold call took
   6.338 seconds; subsequent calls took 0.199–1.126 seconds.

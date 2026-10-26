@@ -162,6 +162,7 @@ class LanSession(asyncio.DatagramProtocol):
         self.phase = "media_login"
         channel = self._channel(0)
         self.task(self._tick())
+        # Firmware login token, not a password-storage hash; the camera requires MD5.
         token = hashlib.md5((self.local["media_password"] + "||" + self.local["local_key"]).encode()).hexdigest()
         login = struct.pack("<II", 0x12345678, 1) + b"admin".ljust(32, b"\0") + token.encode().ljust(32, b"\0") + bytes(32)
         for message in [login, *(bytes.fromhex(raw) for raw in STARTUP)]:

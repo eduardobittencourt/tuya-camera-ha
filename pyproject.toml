@@ -5,7 +5,7 @@ description = "Python Tuya camera integration for Home Assistant"
 requires-python = ">=3.14"
 
 [project.optional-dependencies]
-test = ["homeassistant==2026.10.2", "pytest-homeassistant-custom-component==0.13.373", "ha-ffmpeg", "av==19.0.2", "PyTurboJPEG==2.5.0", "tuya-mobile==1.2.0", "tinytuya==1.20.0", "aiortc@https://github.com/aiortc/aiortc/archive/10ccd168528d93996d013d0ecfae679c3a764b68.zip", "paho-mqtt==2.1.0", "ruff"]
+test = ["homeassistant==2026.10.2", "pytest-homeassistant-custom-component==0.13.373", "ha-ffmpeg", "av==19.0.2", "PyTurboJPEG==2.5.0", "tuya-mobile==1.2.0", "tinytuya==1.20.0", "aiortc@https://github.com/aiortc/aiortc/archive/10ccd168528d93996d013d0ecfae679c3a764b68.zip", "paho-mqtt>=2.1.0", "ruff"]
 
 [tool.pytest.ini_options]
 markers = ["media: real FFmpeg/RTSP end-to-end tests with a synthetic camera"]

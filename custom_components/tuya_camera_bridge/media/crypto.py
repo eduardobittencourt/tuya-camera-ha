@@ -1,4 +1,9 @@
-"""Tuya LAN framing and authenticated media; no credentials leave memory."""
+"""Tuya LAN framing and authenticated media; no credentials leave memory.
+
+AES-ECB signaling and AES-CBC media are fixed camera wire protocols, not a
+choice for new encrypted storage. UDP HMAC is verified before opening media.
+Changing these modes would break interoperability with the supported firmware.
+"""
 from __future__ import annotations
 
 import hashlib

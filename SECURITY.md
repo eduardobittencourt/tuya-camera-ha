@@ -24,3 +24,12 @@ expose operational state, sanitized counters and FFmpeg process counts only.
 Dependencies are declared in the integration manifest; the current beta's aiortc
 upstream commit pin and compatibility limits are documented in
 [architecture](docs/architecture.md).
+
+The supported firmware fixes the legacy wire algorithms: protocol-3.3 TCP
+signaling uses AES-ECB with CRC framing, local media uses AES-CBC with verified
+per-datagram HMAC-SHA1, and P2P login uses an MD5-derived token. These operations
+are limited to Tuya interoperability; they are not used to store user passwords
+or to define a new encryption format. Changing the algorithms requires firmware
+support. The signaling protocol is a reason to restrict camera access to a
+trusted LAN. Protocol-algorithm scanner findings must be reviewed with this
+scope rather than "fixed" by silently changing the on-wire format.
