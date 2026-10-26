@@ -46,26 +46,18 @@ jobs:
       - run: node --test tests/test_release_gate.cjs
       - run: pytest -m 'not media'
 
-  go:
+  package:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.26.8"
-          cache-dependency-path: bridge/go.sum
-      - working-directory: bridge
-        run: |
-          test -z "$(gofmt -l .)"
-          go test -race ./...
-      - run: python3 scripts/package_release.py --verify
+      - run: python3 scripts/package_release.py
       - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: managed-integration
+          name: python-integration
           path: dist/*
           retention-days: 7
 
@@ -83,10 +75,6 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             requirements-media.txt
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.26.8"
-          cache-dependency-path: bridge/go.sum
       - name: Install test dependencies and checksum-pinned FFmpeg
         timeout-minutes: 4
         run: |
@@ -106,10 +94,8 @@ jobs:
             --output /tmp/go2rtc
           echo "32d616af226bd731678ffde328b94cfb94e30339bfefc469cfb76323144615a6  /tmp/go2rtc" | sha256sum --check
           chmod 0755 /tmp/go2rtc
-      - working-directory: bridge
-        run: go build -o /tmp/webrtc-probe ./internal/testmedia/webrtc
       - run: pytest -m media --timeout=120
         env:
           TEST_MEDIAMTX_BINARY: /tmp/mediamtx
           TEST_GO2RTC_BINARY: /tmp/go2rtc
-          TEST_WEBRTC_PROBE: /tmp/webrtc-probe
+          TEST_WEBRTC_PROBE: scripts/webrtc_probe.py

@@ -1,19 +1,26 @@
 # Contributor guidance
 
 The primary product is `custom_components/tuya_camera_bridge`: a UI-driven Home
-Assistant integration that installs and supervises the Go media bridge under
-`bridge`. This repository ships only the native integration; do not reintroduce
-a standalone add-on, Docker image, ONVIF gateway or credential-managing CLI.
+Assistant integration. All Tuya account, signaling, LAN media and WebRTC protocol
+code runs in Python inside the integration. Do not reintroduce a Go bridge,
+standalone add-on, Docker image, ONVIF gateway or credential-managing CLI.
+FFmpeg is Home Assistant's existing media executable, managed on demand.
 
-Users must not copy device IDs, sessions, keys, ports or YAML. Contract changes
-must be implemented and tested on both the Python and Go sides. Keep managed
-listeners on loopback and account session material on stdin, not command lines.
+Users must not copy device IDs, sessions, keys, ports or YAML. Keep internal
+listeners on loopback. Share the LAN signaling/DP socket with media; do not add
+periodic DP refreshes on the verified battery camera, which interrupt video.
+Bound queues and tasks, and close sockets/FFmpeg processes on cancellation,
+unload and removal. Reuse HA's async HTTP client and keep blocking work off its
+main event loop.
 
 Never commit credentials, session IDs, encryption codes, local keys, captured
-MQTT payloads or generated bridge JSON. Public app-profile constants under
-`vendor/tuya_mobile/profiles.py` identify shared mobile builds, not user secrets.
-Do not log raw bridge output or credential-bearing errors.
+MQTT payloads or generated account configurations. Public app-profile constants
+under `vendor/tuya_mobile/profiles.py` identify shared mobile builds, not user
+secrets. Never log raw protocol output or credential-bearing errors.
 
-Run Python lint/tests, Go race tests/build and real synthetic-camera media
-tests before release. Releases use Go 1.26.8 and `scripts/package_release.py`; regenerate the checked-in binary
-manifest whenever Go source changes.
+Run Python lint/tests, package checks and real synthetic-camera media tests
+before release. Build the Python-only HACS archive with
+`scripts/package_release.py`. Preserve the integration domain, account config
+and entity unique IDs when migrating existing installations. The aiortc raw RTP
+adapter is version-sensitive: run its synthetic H.264 and H.265/datachannel peer
+tests when updating the pinned upstream dependency.

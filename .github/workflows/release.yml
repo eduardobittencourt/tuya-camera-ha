@@ -21,11 +21,7 @@ jobs:
           script: |
             const {releaseGate} = require('./scripts/release_gate.cjs');
             await releaseGate({github, context});
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.26.8"
-          cache-dependency-path: bridge/go.sum
-      - run: python3 scripts/package_release.py --verify
+      - run: python3 scripts/package_release.py
       - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
       - name: Prepare a draft release for review
         env:

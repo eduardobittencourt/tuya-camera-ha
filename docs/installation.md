@@ -4,11 +4,11 @@
 
 | Requirement | Supported configuration |
 | --- | --- |
-| Home Assistant | 2026.9 or newer; real-camera validation used 2026.9.4 |
+| Home Assistant | 2026.9 or newer; real-camera validation used 2026.10.4 |
 | Operating system | Linux; HA OS and Container include the required FFmpeg binary |
-| Architecture | amd64/x86_64 or AArch64/ARM64; 32-bit ARM is not supported |
+| Architecture | No project executable restriction; Python/media dependencies need compatible wheels. Live validation: Linux amd64 |
 | Account | Tuya Smart or Smart Life, with a compatible camera already paired |
-| Network | Tuya services for authentication/signaling; GitHub Releases for first setup/upgrades |
+| Network | Tuya for provisioning/wake; GitHub and Python indexes for installation/dependency checks |
 | FFmpeg | H.264/AAC encoders; other Linux installations must provide it |
 
 Hardware acceleration is not configured. H.265-to-H.264 conversion uses software
@@ -36,9 +36,9 @@ MFA/captcha challenges can prevent login; see [troubleshooting](troubleshooting.
 If the repository does not appear in search, clear HACS filters and use the
 **Open in HACS** button above.
 
-A draft release cannot be installed by the public. The release must include
-`tuya_camera_bridge.zip`, both Linux executables and `SHA256SUMS`; the integration
-pins their checksums. Development source alone is not sufficient for first setup.
+A draft cannot be installed publicly. Releases contain `tuya_camera_bridge.zip`
+and `SHA256SUMS`. Version 0.4.0b1 moves all protocols into Python and is available
+only with beta versions enabled. The stable 0.3.x line retains the Go executable.
 
 ## Manual installation
 
@@ -46,7 +46,8 @@ Download `tuya_camera_bridge.zip` from a published release and extract its conte
 into `/config/custom_components/tuya_camera_bridge/`. The resulting directory
 must contain `manifest.json`, `__init__.py` and `brand/`, not an extra nested
 `tuya_camera_bridge` directory. Restart HA and complete the same UI login flow.
-The matching bridge executable is downloaded automatically.
+HA installs the declared Python dependencies automatically; no protocol executable
+is downloaded. See the beta [dependency compatibility note](architecture.md#dependencies-and-compatibility).
 
 ## Updates and rediscovery
 
@@ -54,10 +55,9 @@ Existing custom-repository installations use the same repository and integration
 domain. Keep the installation and account configuration; catalog inclusion does
 not require removal, reinstallation or another login.
 
-Update through HACS and restart HA. Executable updates are downloaded and verified
-on integration setup; a valid cached binary is reused when it matches the release.
-Never replace a published release's binaries with different builds under the same
-version.
+Update through HACS and restart HA. The Python migration preserves account and
+entity IDs and removes the obsolete managed executable cache after setup. Never
+reuse a published version for different code.
 
 Use **Reconfigure** on the integration entry to sign in again and refresh the
 camera list. Recognized session-expiry errors start the HA reauthentication flow.
@@ -76,5 +76,5 @@ The new integration does not remove or reconfigure other HA integrations.
 
 Delete the integration entry in HA. Its processes stop and its account runtime
 directory is removed. Remove the files through HACS and restart HA if uninstalling
-completely. A shared verified executable cache can remain for other accounts.
+completely. Version 0.4.x does not maintain an executable cache.
 Backups can still contain old sessions; treat them as sensitive.

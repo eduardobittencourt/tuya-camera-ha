@@ -29,8 +29,7 @@ async def test_setup_creates_native_cameras_and_unload_stops_every_process(hass,
     bridge.sources = {item["camera_id"]: {"hevc": False} for item in data["cameras"]}
     bridge.source_url.side_effect = lambda cid: f"rtsp://127.0.0.1:1234/{cid}"
     with patch.object(FFmpegManager, "async_get_version", return_value=("7.0.2", 7)), \
-         patch("custom_components.tuya_camera_bridge.ensure_binary", return_value=tmp_path / "bridge"), \
-         patch("custom_components.tuya_camera_bridge.ManagedBridge", return_value=bridge):
+         patch("custom_components.tuya_camera_bridge.MediaRuntime", return_value=bridge):
         assert await async_setup_component(hass, "ffmpeg", {})
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -125,8 +124,7 @@ async def test_lan_entities_follow_schema_and_ha_services_use_only_local_command
         await asyncio.Event().wait()
 
     with patch.object(FFmpegManager, "async_get_version", return_value=("7.0.2", 7)), \
-         patch("custom_components.tuya_camera_bridge.ensure_binary", return_value=tmp_path / "bridge"), \
-         patch("custom_components.tuya_camera_bridge.ManagedBridge", return_value=bridge), \
+         patch("custom_components.tuya_camera_bridge.MediaRuntime", return_value=bridge), \
          patch("custom_components.tuya_camera_bridge.lan.LocalCamera.start", start), \
          patch("custom_components.tuya_camera_bridge.transcoder.FfmpegRelay.control_session", control_session), \
          patch("custom_components.tuya_camera_bridge.api.TuyaCameraApi.async_prepare_local_controls") as cloud:

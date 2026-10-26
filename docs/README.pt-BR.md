@@ -8,17 +8,23 @@
 
 Uma integração para conectar câmeras compatíveis do **Tuya Smart e Smart Life**
 pelo próprio Home Assistant. Você faz login na interface do HA; a integração
-busca as câmeras e instala e gerencia o bridge de vídeo automaticamente.
+busca as câmeras e executa os protocolos em Python dentro da integração.
+
+**Desenvolvimento / beta 0.4.0:** o executável Go foi removido. A estável 0.3.4
+mantém a arquitetura anterior. Habilite versões beta no HACS para testar a
+migração; veja a [arquitetura](architecture.md).
 
 [English](../README.md) · [Instalação detalhada](installation.md) ·
 [Compatibilidade](compatibility.md) · [Resolução de problemas](troubleshooting.md)
+
+[Validação da beta Python](validation-0.4.0b1.md)
 
 ## O que funciona
 
 - Câmeras nativas no HA, vídeo com som e capturas de imagem novas.
 - Reprodução por HLS e pelo WebRTC do Home Assistant.
 - Descoberta de câmeras, reconfiguração e novo login quando a sessão expira.
-- Reinício automático do bridge após uma falha.
+- Sessões de mídia gerenciadas em Python, sem baixar um executável de protocolo.
 - Vídeo H.264 sem reconversão e H.265 convertido para H.264 em 720p / 15 fps.
 - [Controles e sensores LAN](local-controls.md)
   para modelos que aceitam o protocolo de controle local da Tuya.
@@ -54,7 +60,7 @@ A instalação pelo HACS e o download automático do bridge foram validados no
 HA OS 2026.9.4, preservando a conta e a câmera da instalação anterior. Veja a
 [validação da release estável](validation-0.3.1.md).
 
-É necessário ter **HA 2026.9 ou mais recente**, Linux **amd64 ou ARM64**, HACS e
+É necessário ter **HA 2026.9 ou mais recente**, Linux, HACS e
 FFmpeg. HA OS e Container já incluem FFmpeg. Em uma instalação Linux própria,
 o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
 
@@ -69,9 +75,10 @@ o FFmpeg precisa estar disponível com os codecs H.264 e AAC.
    país usados no aplicativo. Para o Brasil, use `55`.
 5. Abra a câmera e ative o som no player.
 
-Uma release em rascunho não pode ser baixada publicamente. A primeira instalação
-precisa dos binários publicados no GitHub; uma branch de desenvolvimento pode
-referenciar arquivos ainda não publicados.
+Uma release em rascunho não pode ser baixada publicamente. A beta 0.4 usa
+dependências Python instaladas pelo HA, incluindo um commit oficial do aiortc
+compatível com o PyAV 19. Não baixa executável Go. Instalação e verificações
+de dependências precisam de acesso ao GitHub e aos índices Python.
 
 Se você já instalou por repositório personalizado, mantenha a instalação e
 atualize normalmente pelo HACS. Não é necessário reinstalar nem configurar a conta

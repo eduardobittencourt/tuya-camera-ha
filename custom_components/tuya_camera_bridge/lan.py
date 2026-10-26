@@ -102,24 +102,24 @@ def valid_scalar(definition: dict, value) -> bool:
             and isfinite(value) and prop.get("min", float("-inf")) <= value <= prop.get("max", float("inf")))
 
 
-class BridgeLANDevice:
-    """TinyTuya-shaped adapter to the Go-owned signaling/DP socket."""
+class MediaLANDevice:
+    """TinyTuya-shaped adapter to the Python-owned signaling/DP socket."""
 
-    def __init__(self, bridge, camera_id: str) -> None:
-        self.bridge, self.camera_id = bridge, camera_id
+    def __init__(self, media, camera_id: str) -> None:
+        self.media, self.camera_id = media, camera_id
 
     async def status(self):
-        return await self.bridge.local_request(self.camera_id, "status")
+        return await self.media.local_request(self.camera_id, "status")
 
     async def receive(self):
-        result = await self.bridge.local_request(self.camera_id, "receive")
+        result = await self.media.local_request(self.camera_id, "receive")
         return result if result.get("dps") else None
 
     async def updatedps(self, ids, nowait=True):
         return None  # Status pushes share signaling; refresh can interrupt IPC video.
 
     async def set_value(self, index, value, nowait=True):
-        await self.bridge.local_request(self.camera_id, "set", index=str(index), value=value)
+        await self.media.local_request(self.camera_id, "set", index=str(index), value=value)
 
     async def heartbeat(self):
         return None  # The signaling owner already sends heartbeats.
@@ -145,7 +145,7 @@ class LocalCamera:
         self._wake = asyncio.Event()
         self._ready = asyncio.Event()
         self.wake_media = None
-        self.media_bridge = None
+        self.media_client = None
         self._media_wake_task: asyncio.Task | None = None
         self._command_media_task: asyncio.Task | None = None
         self._command_media_ready = asyncio.Event()
@@ -265,8 +265,8 @@ class LocalCamera:
         return True
 
     async def _connect(self) -> bool:
-        if self.media_bridge:
-            self._device = BridgeLANDevice(self.media_bridge, self.camera_id)
+        if self.media_client:
+            self._device = MediaLANDevice(self.media_client, self.camera_id)
             result = await self._device.status()
             if not self._apply(result):
                 return False
@@ -366,7 +366,7 @@ class LocalCamera:
                     if not self.connected:
                         await self._connect()
                         last_heartbeat = last_status = time.monotonic()
-                    elif not self.on_demand and not self.media_bridge and time.monotonic() - last_status >= 30:
+                    elif not self.on_demand and not self.media_client and time.monotonic() - last_status >= 30:
                         if not self._apply(await self._call(self._device.status)):
                             self.status = "disconnected"
                             await self._close()
@@ -399,7 +399,7 @@ class LocalCamera:
             if not self.connected:
                 # Re-evaluate the LAN address after DHCP changes, without cloud discovery.
                 self.config = {key: value for key, value in self.config.items() if key not in ("host", "version")}
-            await self._pause(0.05 if self.connected else (1 if self.on_demand or self.media_bridge else 30))
+            await self._pause(0.05 if self.connected else (1 if self.on_demand or self.media_client else 30))
 
     async def _wake_for_command(self) -> None:
         try:
@@ -495,7 +495,7 @@ class LocalCamera:
         if not valid:
             raise HomeAssistantError("Invalid value for this camera function")
         if (self.on_demand and self.wake_media and not self._stopping.is_set()
-                and not (self.media_bridge and self.connected and self._window_open())):
+                and not (self.media_client and self.connected and self._window_open())):
             if self._media_wake_task is None or self._media_wake_task.done():
                 self._media_wake_task = asyncio.create_task(self._wake_for_command())
             await asyncio.shield(self._media_wake_task)
@@ -507,11 +507,11 @@ class LocalCamera:
                     await self._prepare_battery_command(code)
                 revision = self._revisions.get(code, 0)
                 _LOGGER.debug("Sending LAN command for %s", code)
-                if self.on_demand or self.media_bridge:
+                if self.on_demand or self.media_client:
                     # Responses to the initial refresh may still be queued. A
                     # synchronous CONTROL can mistake them for its own reply
                     # and close the socket before the actual DP report arrives.
-                    if self._account_uid and not self.media_bridge:
+                    if self._account_uid and not self.media_client:
                         response = await self._call(_send_battery_value, self._device,
                                                     str(definition["id"]), value, self._account_uid)
                     else:
@@ -522,9 +522,9 @@ class LocalCamera:
                     raise HomeAssistantError("The camera rejected the LAN command")
                 self._apply(response)
                 # Confirm from the camera; do not invent an optimistic state.
-                if not self.on_demand and not self.media_bridge:
+                if not self.on_demand and not self.media_client:
                     self._apply(await self._call(self._device.status))
-                deadline = time.monotonic() + (5 if self.on_demand or self.media_bridge else 0)
+                deadline = time.monotonic() + (5 if self.on_demand or self.media_client else 0)
                 while (self._revisions.get(code, 0) == revision or self.values.get(code) != value):
                     if self._stopping.is_set() or time.monotonic() >= deadline:
                         raise HomeAssistantError("The camera did not confirm the LAN command")

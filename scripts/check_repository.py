@@ -49,12 +49,13 @@ def check_repository() -> dict:
                     f"Broken relative link in {path.relative_to(ROOT)}: {link}")
     manifest = json.loads((COMPONENT / "manifest.json").read_text())
     hacs = json.loads((ROOT / "hacs.json").read_text())
-    binary = json.loads((COMPONENT / "bridge_checksums.json").read_text())
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-    require(manifest["version"] == project["version"] == binary["version"], "Release versions differ")
+    require(manifest["version"] == project["version"], "Release versions differ")
+    require(f'VERSION = "{manifest["version"]}"' in (COMPONENT / "__init__.py").read_text(),
+            "Runtime version differs from manifest")
     integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / "manifest.json").exists()]
     require(integrations == [COMPONENT], "HACS repository must contain exactly one integration")
-    require((ROOT / "bridge" / "go.mod").is_file(), "Missing managed bridge source")
+    require(not (ROOT / "bridge").exists(), "The integration must own all camera protocols in Python")
     require(not (ROOT / "repository.yaml").exists()
             and not (ROOT / "tuya-camera-bridge-addon").exists(),
             "Standalone add-on assets must not return to this integration-only repository")
@@ -69,8 +70,6 @@ def check_repository() -> dict:
     require(hacs["hide_default_branch"], "Development branch must not bypass release assets")
     require(manifest["codeowners"] and manifest["issue_tracker"] and manifest["documentation"],
             "Missing integration support metadata")
-    require(set(binary["sha256"]) == {f"tuya-camera-bridge-linux-{arch}" for arch in ("amd64", "arm64")},
-            "Missing supported-architecture binary pins")
     for name, expected in {"icon.png": (256, 256), "icon@2x.png": (512, 512),
                            "logo.png": (512, 256), "logo@2x.png": (1023, 512)}.items():
         data = (COMPONENT / "brand" / name).read_bytes()
@@ -97,12 +96,8 @@ def check_archive(path: Path, manifest: dict) -> None:
         for name, source in expected.items():
             require(archive.read(name) == source.read_bytes(), f"Archive content differs: {name}")
         require(json.loads(archive.read("manifest.json")) == manifest, "Archive manifest differs")
-    pins = json.loads((COMPONENT / "bridge_checksums.json").read_text())["sha256"]
-    sums = "".join(f"{digest}  {name}\n" for name, digest in pins.items())
-    require((path.parent / "SHA256SUMS").read_text() == sums, "Published checksums differ from pins")
-    for name, digest in pins.items():
-        require(hashlib.sha256((path.parent / name).read_bytes()).hexdigest() == digest,
-                f"Executable differs from its pinned checksum: {name}")
+    sums = f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
+    require((path.parent / "SHA256SUMS").read_text() == sums, "Published archive checksum differs")
 
 
 def main() -> None:
@@ -113,7 +108,7 @@ def main() -> None:
     if args.archive:
         check_archive(args.archive, manifest)
     print(f"Public repository checks passed for {manifest['version']}"
-          + ("; HACS ZIP and executables verified" if args.archive else ""))
+          + ("; Python HACS ZIP verified" if args.archive else ""))
 
 
 if __name__ == "__main__":

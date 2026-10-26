@@ -207,35 +207,3 @@ class TuyaCameraApi:
                     pass
             cameras.append({**camera, **({"local": local} if local else {})})
         return cameras
-
-
-def bridge_app_material(application: str) -> dict[str, str]:
-    """Return public, versioned APK identity material needed by the bridge."""
-    profile = get_mobile_app_profile(TuyaMobileApp(application))
-    from .vendor.tuya_mobile.signer import PurePythonTuyaSigner
-
-    signer = PurePythonTuyaSigner(
-        profile.app_id,
-        profile.app_secret,
-        profile.cert_sha256_hex,
-        profile.app_key,
-        profile.package,
-    )
-    return {
-        "signing_key": signer.global_material(),
-        # The legacy Go bridge names this field AppKey, but it is sent as the
-        # Tuya mobile API clientId. That value is the 20-character app_id; the
-        # cryptographic app_key is already embedded in signing_key above.
-        "app_key": profile.app_id,
-        "ch_key": signer.channel_key(),
-        "package_name": profile.package,
-        "app_version": profile.app_version,
-        "sdk_version": profile.sdk_version,
-        "device_core_version": profile.device_core_version,
-        "ttid": profile.ttid,
-        "channel": profile.channel,
-        "os_system": profile.os_system,
-        "platform": profile.platform,
-        "app_rn_version": profile.app_rn_version,
-        "et": profile.et,
-    }

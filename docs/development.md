@@ -1,75 +1,47 @@
 # Development
 
-Use Python 3.14 and Go 1.26.8. The Home Assistant test version and its matching
-pytest plugin are pinned together in `pyproject.toml`. Work from the
-repository root and read [AGENTS.md](../AGENTS.md) before changing code.
+Use Python 3.14. Install the test dependencies from `pyproject.toml`; its Home
+Assistant and pytest plugin pins must be updated together. No Go toolchain is
+required. Read [AGENTS.md](../AGENTS.md) before changing protocol code.
 
 ```sh
-python3.14 -m venv .venv
-. .venv/bin/activate
-pip install -e '.[test]'
-ruff check custom_components tests scripts
-python scripts/check_repository.py
+uv venv --python 3.14
+uv pip install '.[test]'
+.venv/bin/ruff check custom_components tests scripts
+.venv/bin/pytest -m 'not media'
+.venv/bin/python scripts/package_release.py
+.venv/bin/python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
 node --test tests/test_release_gate.cjs
-pytest -m 'not media'
 ```
 
-For the managed Go bridge:
+## Protocol and media validation
+
+`test_python_transport.py` exercises signal framing, AES padding/corruption,
+KCP wire vectors, loss, duplication, reordering, retransmission and limits.
+`test_python_runtime.py` checks session sharing and cleanup. The synthetic peers
+in `test_python_webrtc.py` test H.264 RTP and Tuya H.265/datachannel negotiation.
+The aiortc raw RTP hook is version-sensitive and must be tested on upgrades.
+
+The `media` tests use real FFmpeg and synthetic pictures/audio. One test runs a
+synthetic Tuya TCP/UDP camera through encrypted AES/KCP, the Python RTSP server
+and FFmpeg, checks JPEG/video/audio and confirms a shared-socket DP command.
+The existing codec tests cover H.264/H.265, HLS, WebRTC and source loss using
+MediaMTX 1.21.1 and go2rtc 1.9.14 as test tools. The WebRTC receiver is Python.
 
 ```sh
-cd bridge
-gofmt -l .
-go test -race ./...
-cd ..
-python scripts/package_release.py --verify
-python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
-```
-
-`--verify` rejects binaries that do not match the tracked manifest. After an
-intentional Go change, build without `--verify` using the pinned toolchain,
-review the manifest change and then verify again. Do not commit `dist/`.
-
-## Real media tests without an account
-
-The `media` tests use a synthetic camera and actual FFmpeg, MediaMTX, go2rtc and
-a Go WebRTC receiver. They exercise H.264/H.265 video, audio, HLS, WebRTC, fresh
-snapshots and source loss. No Tuya credentials are required.
-
-Install FFmpeg, MediaMTX 1.21.1 and go2rtc 1.9.14, and build the receiver:
-
-```sh
-mkdir -p "$HOME/research/tuya-camera-ha/media-validation/tools"
-cd bridge
-go build -o "$HOME/research/tuya-camera-ha/media-validation/tools/webrtc-probe" ./internal/testmedia/webrtc
-cd ..
 TEST_FFMPEG_BINARY=/usr/bin/ffmpeg \
 TEST_MEDIAMTX_BINARY=/path/to/mediamtx \
 TEST_GO2RTC_BINARY=/path/to/go2rtc \
-TEST_WEBRTC_PROBE="$HOME/research/tuya-camera-ha/media-validation/tools/webrtc-probe" \
-pytest -m media --timeout=120
+TEST_WEBRTC_PROBE=scripts/webrtc_probe.py \
+.venv/bin/pytest -m media --timeout=120
 ```
 
-Run pytest from the repository root. Keep downloaded tools and investigation
-artifacts under `~/research/tuya-camera-ha/`, outside the release payload.
+Activate `.venv` when using the executable probe so its Python dependencies
+are found. Research/tools belong under `~/research/tuya-camera-ha/`, outside
+release payloads. The [CI workflow](../.github/workflows/ci.yml) defines tool
+versions and downloads. Its checksum-pinned FFmpeg wheel is test tooling only.
 
-The [CI workflow](../.github/workflows/ci.yml) shows exact downloads and checksums.
-Its media job uses the checksum-pinned Linux x86_64 `imageio-ffmpeg` wheel in
-[`requirements-media.txt`](../requirements-media.txt), which bundles FFmpeg 7.0.2.
-This avoids an APT update/install on each runner. It is test tooling only;
-the integration continues to use Home Assistant's FFmpeg. Python downloads are
-cached, external media-tool downloads have bounded retries, and the media job
-has a ten-minute limit, including setup. Both codec cases still exercise actual
-FFmpeg, HLS, WebRTC, audio, snapshots and source loss on every PR.
-
-CI runs on pull requests and pushes to `main`, avoiding duplicate branch-push
-and PR runs. New commits cancel superseded runs for the same PR. Maintainers
-can also run CI manually on a branch before opening a PR.
-Build artifacts expire after seven days to limit retained CI storage.
-
-It also scans secrets. The separate
-[validation workflow](../.github/workflows/validate.yml) runs official hassfest
-and HACS validators without skipped checks on pushes, pull requests, daily and
-on demand, so upstream validation changes are detected between releases.
-
-Never record private account sessions or media fixtures in the repository.
-Real-camera validation belongs in a sanitized [compatibility report](compatibility.md).
+Before publishing, run a clean dependency resolution for the declared test
+extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
+hassfest. Synthetic peers cannot certify another retail camera. Record sanitized
+real-camera results and limits; never retain private media or protocol payloads.

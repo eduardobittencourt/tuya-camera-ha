@@ -1,4 +1,4 @@
-"""Native camera entities backed by the automatically managed bridge."""
+"""Native camera entities backed by the Python media sessions."""
 from __future__ import annotations
 
 import time
@@ -40,10 +40,10 @@ class TuyaBridgeCamera(Camera):
 
     @property
     def available(self) -> bool:
-        return self._runtime.bridge.ready and not self._runtime.bridge.auth_required and not self._needs_probe()
+        return self._runtime.media.ready and not self._runtime.media.auth_required and not self._needs_probe()
 
     def _needs_probe(self) -> bool:
-        status = self._runtime.bridge.camera_status.get(self._camera_id, {})
+        status = self._runtime.media.camera_status.get(self._camera_id, {})
         if status.get("state") == "error":
             return True
         last_video = status.get("last_video")
@@ -51,16 +51,16 @@ class TuyaBridgeCamera(Camera):
                     and time.time() - last_video > 45)
 
     async def async_update(self) -> None:
-        if self._runtime.bridge.ready and self._needs_probe():
+        if self._runtime.media.ready and self._needs_probe():
             with suppress(OSError, TimeoutError):
                 await self._runtime.relays[self._camera_id].snapshot()
 
     @property
     def extra_state_attributes(self) -> dict:
-        status = self._runtime.bridge.camera_status.get(self._camera_id, {})
+        status = self._runtime.media.camera_status.get(self._camera_id, {})
         last_video = status.get("last_video")
         return {
-            "media_transport": self._runtime.bridge.sources.get(self._camera_id, {}).get("transport", "cloud"),
+            "media_transport": self._runtime.media.sources.get(self._camera_id, {}).get("transport", "cloud"),
             "cloud_wakes": status.get("cloud_wakes", 0),
             "connection_status": status.get("state", "standby") if self.available else "disconnected",
             "last_video_received": datetime.fromtimestamp(last_video, UTC).isoformat() if last_video else None,

@@ -11,12 +11,13 @@ Restart HA and search for **Tuya Camera Bridge** in Devices & services. For a
 manual install, confirm `manifest.json` is directly inside
 `custom_components/tuya_camera_bridge/`. Check the minimum HA version.
 
-## Bridge download or checksum failure
+## Python dependency installation fails
 
-Install a published release with its matching executable assets. A development
-checkout can reference an unpublished version. Check GitHub access and Linux
-architecture. Do not disable checksum verification or paste an arbitrary binary
-into the integration directory. Raise an issue if published files do not match.
+Version 0.4.x does not download a bridge executable. Check the HA package-install
+error and access to GitHub/Python package indexes. This beta pins an upstream
+aiortc commit supporting HA's PyAV 19; do not downgrade HA's PyAV or bypass its
+constraints. Include the sanitized dependency error and HA version in a report.
+See [dependency details](architecture.md#dependencies-and-compatibility).
 
 ## Login fails or finds no cameras
 
@@ -36,9 +37,9 @@ in the mobile app, then wait for wake-up/connection establishment. The tested
 camera's cold HLS startup was about 15–18 seconds; other devices can differ.
 Check Tuya connectivity and that this model supports mobile WebRTC.
 
-`connection_status: standby` means the bridge is ready; it does not prove the
+`connection_status: standby` means the Python media service is ready; it does not prove the
 camera is reachable. `video` and `last_video_received` report actual received
-packets. `disconnected`/unavailable indicates bridge or detected media failure.
+packets. `disconnected`/unavailable indicates a Python media task or session failure.
 An old timestamp while idle is not a current connectivity test.
 
 ## First snapshot fails after startup or reload
@@ -68,15 +69,15 @@ multiple dashboards/consumers and compare with the measured validation results.
 
 ## Recovery and expired sessions
 
-A crashed bridge restarts automatically with bounded backoff. Recognized expired
-sessions require a new login in HA. An unreachable camera cannot be repaired by
-restarting the bridge alone; it must come back online. Long camera/WAN outages
+A failed media session closes its affected readers; the next media request
+creates a fresh session. Recognized expired sessions require a new login in HA.
+An unreachable camera cannot be repaired by reloading the integration alone; it must come back online. Long camera/WAN outages
 have not been fully validated on the real test device.
 
 ## Reporting safely
 
 Use [the bug form](https://github.com/eduardobittencourt/tuya-camera-ha/issues/new?template=bug_report.yml).
 Describe expected/actual behavior and repeatable steps. Share only reviewed,
-sanitized HA error excerpts. Do not attach `.storage`, a backup, bridge JSON,
+sanitized HA error excerpts. Do not attach `.storage`, a backup, account configuration,
 raw MQTT/WebRTC/SDK output, credentials, keys, IDs or a private camera image.
 Security problems belong in [private reporting](../SECURITY.md).

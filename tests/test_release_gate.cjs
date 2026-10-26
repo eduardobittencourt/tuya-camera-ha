@@ -15,9 +15,9 @@ test('release gate requires all six successful jobs on the exact main commit', a
       },
       listJobsForWorkflowRun() {},
     }}, paginate: async (_, args) => {
-      const names = args.run_id === 'ci.yml' ? ['secrets', 'python', 'go', 'media'] : ['hacs', 'hassfest'];
+      const names = args.run_id === 'ci.yml' ? ['secrets', 'python', 'package', 'media'] : ['hacs', 'hassfest'];
       return names.filter(name => !(problem === 'missing' && name === 'media'))
-        .map(name => ({name, conclusion: problem === 'skipped' && name === 'go' ? 'skipped' : 'success'}));
+        .map(name => ({name, conclusion: problem === 'skipped' && name === 'package' ? 'skipped' : 'success'}));
     }};
     if (problem) await assert.rejects(releaseGate({github, context}));
     else await releaseGate({github, context});
