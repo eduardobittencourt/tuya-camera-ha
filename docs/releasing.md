@@ -31,6 +31,15 @@ update and restart alone do not migrate the domain. Rollback across that change
 also requires a reinstall or inverse offline registry migration; selecting the
 former-domain release in HACS and restarting is insufficient.
 
+For this beta, also verify HACS repository identity after a cold restart. Its
+cached component path can remain on the former domain while stable 0.3.x is
+available. The tested installation needed metadata reconciliation with HACS
+unloaded and v0.4.0b2 explicitly selected. Confirm the official ZIP was downloaded
+through HACS, its installed files match the release, the new domain remains
+selected after restart/refresh, and no old component directory reappears. Do not
+claim that uninstall/reinstall alone clears this cache. Manual ZIP installation
+is the fallback; avoid instructing users to edit credential-bearing HA stores.
+
 The repository is in the HACS default catalog. No new catalog PR is required.
 `hacs.json` selects the ZIP. Branding remains in the integration's `brand/`
 directory. Retain licenses and notices in the archive and follow the
