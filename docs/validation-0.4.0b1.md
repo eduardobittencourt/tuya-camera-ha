@@ -39,6 +39,11 @@ on HA OS / Core 2026.10.4, Linux amd64. These are measurements from one unit.
   over 20.03 seconds through the H.264/AAC relay. The main Tuya entry was
   temporarily disabled for this test and re-enabled afterwards.
 
+The final runtime also passed an integration reload (0.085 seconds), a fresh
+JPEG after reload (5.768 seconds), and return to `standby` with zero owned media
+processes. The obsolete binary cache was absent and no Go protocol executable
+was running in the HA container.
+
 Only dimensions, durations, counts and codec/state information were retained.
 No private image, video/audio recording, signed URL or raw protocol payload was
 saved. Other integrations were not changed.
