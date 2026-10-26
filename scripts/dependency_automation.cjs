@@ -44,39 +44,36 @@ async function dispatchChecks(github, repo, branch, onlyMissing = false, sha = '
   }
 }
 
-async function dispatchChecksumBuild(github, repo, pr) {
+async function dispatchChecksumBuild(github, repo, pr, retryFailed = false) {
   const workflow_id = 'dependency-checksums.yml';
   const {data} = await github.rest.actions.listWorkflowRuns({
     ...repo, workflow_id, head_sha: pr.head.sha, per_page: 1,
   });
-  if (!data.total_count) {
+  const latest = data.workflow_runs?.[0];
+  if (!data.total_count || (retryFailed && latest?.status === 'completed' && latest.conclusion !== 'success')) {
     // Runs in the PR branch's security/cache context, never the default branch's.
     await github.rest.actions.createWorkflowDispatch({...repo, workflow_id, ref: pr.head.ref});
   }
 }
 
-async function checksumCandidate(github, context) {
-  const run = context.payload?.workflow_run;
+async function checksumCandidate(github, context, pr, files) {
   const repository = `${context.repo.owner}/${context.repo.repo}`;
+  if (!eligible(pr, repository) || !goOnly(files)) return null;
+  // Discover results by immutable head, even if a concurrency queue replaced
+  // the workflow_run notification with an unrelated maintenance trigger.
+  const {data} = await github.rest.actions.listWorkflowRuns({
+    ...context.repo, workflow_id: 'dependency-checksums.yml',
+    head_sha: pr.head.sha, status: 'success', per_page: 1,
+  });
+  const run = data.workflow_runs[0];
   if (!run || run.conclusion !== 'success' || run.head_repository?.full_name !== repository
+      || run.status !== 'completed' || run.head_sha !== pr.head.sha || run.head_branch !== pr.head.ref
       || !['pull_request', 'workflow_dispatch'].includes(run.event)) return null;
   const {data: workflow} = await github.rest.actions.getWorkflow({
     ...context.repo, workflow_id: 'dependency-checksums.yml',
   });
   if (run.workflow_id !== workflow.id) return null;
-  const prs = await github.paginate(github.rest.pulls.list, {
-    ...context.repo, state: 'open', base: 'main', head: `${context.repo.owner}:${run.head_branch}`,
-    per_page: 100,
-  });
-  for (const entry of prs) {
-    const {data: pr} = await github.rest.pulls.get({...context.repo, pull_number: entry.number});
-    if (!eligible(pr, repository) || pr.head.sha !== run.head_sha) continue;
-    const files = await github.paginate(github.rest.pulls.listFiles, {
-      ...context.repo, pull_number: pr.number, per_page: 100,
-    });
-    if (goOnly(files)) return {number: pr.number, sha: run.head_sha};
-  }
-  return null;
+  return {number: pr.number, sha: run.head_sha, run_id: run.id};
 }
 
 async function needsChecksums(github, repo, pr, files) {
@@ -103,8 +100,7 @@ async function manage({github, context, core}) {
   const prs = await github.paginate(github.rest.pulls.list, {
     ...repo, state: 'open', base: 'main', sort: 'created', direction: 'asc', per_page: 100,
   });
-  const candidate = await checksumCandidate(github, context);
-  core.setOutput('checksum_candidate', candidate ? JSON.stringify(candidate) : '');
+  const candidates = [];
   for (const entry of prs) {
     if (entry.user.login !== 'dependabot[bot]') continue;
     try {
@@ -145,7 +141,10 @@ async function manage({github, context, core}) {
       const {data: current} = await github.rest.pulls.get({...repo, pull_number: pr.number});
       if (current.head.sha !== pr.head.sha) continue;
       if (await needsChecksums(github, repo, pr, files)) {
-        await dispatchChecksumBuild(github, repo, pr);
+        const candidate = await checksumCandidate(github, context, pr, files);
+        if (candidate) candidates.push(candidate);
+        else await dispatchChecksumBuild(github, repo, pr,
+          ['schedule', 'workflow_dispatch'].includes(context.eventName));
       } else {
         await dispatchChecks(github, repo, pr.head.ref, true, pr.head.sha);
       }
@@ -160,6 +159,7 @@ async function manage({github, context, core}) {
   }
   const {data: latest} = await github.rest.repos.getBranch({...repo, branch: 'main'});
   await dispatchChecks(github, repo, 'main', true, latest.commit.sha);
+  core.setOutput('checksum_candidates', JSON.stringify(candidates));
 }
 
 async function publish({github, context, core}, candidate, value) {

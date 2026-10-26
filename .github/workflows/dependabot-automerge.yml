@@ -28,7 +28,7 @@ jobs:
       pull-requests: write
       actions: write
     outputs:
-      checksum_candidate: ${{ steps.manage.outputs.checksum_candidate }}
+      checksum_candidates: ${{ steps.manage.outputs.checksum_candidates }}
     steps:
       # Privileged jobs load scripts from the default branch, never a PR.
       - uses: actions/checkout@v4
@@ -44,7 +44,11 @@ jobs:
 
   publish-checksums:
     needs: manage
-    if: needs.manage.outputs.checksum_candidate != ''
+    if: needs.manage.outputs.checksum_candidates != '[]' && needs.manage.outputs.checksum_candidates != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate: ${{ fromJSON(needs.manage.outputs.checksum_candidates) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -61,10 +65,10 @@ jobs:
           name: bridge-checksums
           path: generated-checksums
           github-token: ${{ github.token }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ matrix.candidate.run_id }}
       - uses: actions/github-script@v9
         env:
-          CANDIDATE: ${{ needs.manage.outputs.checksum_candidate }}
+          CANDIDATE: ${{ toJSON(matrix.candidate) }}
         with:
           script: |
             const fs = require('node:fs');

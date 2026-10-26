@@ -59,6 +59,10 @@ with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,
 without write permissions, secrets or shared build caches. A separate trusted
 workflow validates the originating run, PR head and allowed files, then commits only that manifest,
 then reruns CI. Other bridge changes require the normal manual regeneration.
+Successful builds are recovered by the current PR commit even when a queued
+maintenance trigger is replaced. Failed or cancelled checksum builds retry on
+hourly or manual maintenance runs; completion events do not trigger immediate
+retry loops.
 No dependency update publishes a release. Compatibility review and real-camera
 validation remain part of [release preparation](docs/releasing.md).
 

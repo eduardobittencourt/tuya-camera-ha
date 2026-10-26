@@ -79,25 +79,48 @@ test('checksum builds dispatch on the PR branch and do not duplicate existing ru
     [['dependency-checksums.yml', 'dependabot/go_modules/update']]);
 });
 
-test('privileged publication rejects foreign, failed, forged and stale build runs', async () => {
-  const original = {conclusion: 'success', head_repository: {full_name: repository},
-    event: 'workflow_dispatch', workflow_id: 123, head_sha: 'old', head_branch: pr().head.ref};
-  let files = [{filename: 'bridge/go.mod', status: 'modified'}];
-  const github = {rest: {
-    actions: {getWorkflow: async () => ({data: {id: 123}})},
-    pulls: {list() {}, listFiles() {}, get: async () => ({data: {...pr(), number: 10}})},
-  }, paginate: async fn => fn === github.rest.pulls.list ? [{number: 10}] : files};
-  const options = {github, context: {...context, payload: {workflow_run: original}}};
-  assert.deepEqual(await checksumCandidate(options.github, options.context), candidate);
-  for (const change of [run => run.conclusion = 'failure', run => run.workflow_id = 456,
-    run => run.head_sha = 'stale', run => run.event = 'push',
-    run => run.head_repository = {full_name: 'fork/camera'}]) {
-    const run = {...original};
-    change(run);
-    assert.equal(await checksumCandidate(github, {...context, payload: {workflow_run: run}}), null);
+test('checksum retries only dispatch completed failures when retry is allowed', async () => {
+  for (const latest of [{status: 'completed', conclusion: 'failure'},
+    {status: 'completed', conclusion: 'cancelled'}, {status: 'completed', conclusion: 'success'},
+    {status: 'in_progress', conclusion: null}, {status: 'queued', conclusion: null}]) {
+    const calls = [];
+    const github = {rest: {actions: {
+      listWorkflowRuns: async () => ({data: {total_count: 1, workflow_runs: [latest]}}),
+      createWorkflowDispatch: async args => calls.push(args),
+    }}};
+    await dispatchChecksumBuild(github, context.repo, pr());
+    assert.equal(calls.length, 0);
+    await dispatchChecksumBuild(github, context.repo, pr(), true);
+    assert.equal(calls.length, latest.status === 'completed' && latest.conclusion !== 'success' ? 1 : 0);
   }
+});
+
+test('privileged publication rejects foreign, failed, forged and stale build runs', async () => {
+  const original = {id: 789, status: 'completed', conclusion: 'success', head_repository: {full_name: repository},
+    event: 'workflow_dispatch', workflow_id: 123, head_sha: 'old', head_branch: pr().head.ref};
+  const files = [{filename: 'bridge/go.mod', status: 'modified'}];
+  let run = original;
+  const github = {rest: {actions: {
+    getWorkflow: async () => ({data: {id: 123}}),
+    listWorkflowRuns: async args => {
+      assert.equal(args.head_sha, 'old');
+      assert.equal(args.status, 'success');
+      return {data: {workflow_runs: [run]}};
+    },
+  }}};
+  const current = {...pr(), number: 10};
+  // No workflow_run payload: the successful build is recovered from GitHub.
+  assert.deepEqual(await checksumCandidate(github, context, current, files), {...candidate, run_id: 789});
+  for (const change of [run => run.conclusion = 'failure', run => run.workflow_id = 456,
+    run => run.head_sha = 'stale', run => run.head_branch = 'other', run => run.event = 'push',
+    run => run.head_repository = {full_name: 'fork/camera'}]) {
+    run = {...original};
+    change(run);
+    assert.equal(await checksumCandidate(github, context, current, files), null);
+  }
+  run = original;
   files.push({filename: 'scripts/package_release.py', status: 'modified'});
-  assert.equal(await checksumCandidate(options.github, options.context), null);
+  assert.equal(await checksumCandidate(github, context, current, files), null);
 });
 
 test('stale build results cannot write to a changed or closed PR', async () => {
@@ -110,7 +133,7 @@ test('stale build results cannot write to a changed or closed PR', async () => {
 });
 
 function managementFixture(problem, state = 'blocked') {
-  const calls = {merged: [], warnings: [], branches: 0, graphql: 0};
+  const calls = {merged: [], warnings: [], branches: 0, graphql: 0, outputs: {}};
   const github = {rest: {
     repos: {
       getBranch: async () => {calls.branches++; return {data: {commit: {sha: 'main'}}};},
@@ -131,7 +154,8 @@ function managementFixture(problem, state = 'blocked') {
   paginate: async fn => fn === github.rest.pulls.list
     ? [1, 2].map(number => ({number, user: {login: 'dependabot[bot]'}}))
     : [{filename: 'pyproject.toml', status: 'modified'}]};
-  const core = {setOutput() {}, info() {}, warning: message => calls.warnings.push(message)};
+  const core = {setOutput: (name, value) => calls.outputs[name] = value,
+    info() {}, warning: message => calls.warnings.push(message)};
   return {options: {github, context, core}, calls};
 }
 
@@ -145,6 +169,44 @@ test('a rejected auto-merge does not block later PRs or final main checks', asyn
     assert.deepEqual(calls.merged, [2]);
     assert.equal(calls.warnings.length, 1);
     assert.equal(calls.branches, 2);
+  }
+});
+
+test('maintenance recovers a publishable build after an unrelated event replaces its notification', async () => {
+  const {options, calls} = managementFixture(null);
+  const {github} = options;
+  const current = {...pr(), number: 10, auto_merge: {}};
+  github.rest.pulls.get = async () => ({data: current});
+  github.paginate = async fn => fn === github.rest.pulls.list
+    ? [{number: 10, user: current.user}] : [{filename: 'bridge/go.mod', status: 'modified'}];
+  github.rest.actions.getWorkflow = async () => ({data: {id: 123}});
+  github.rest.actions.listWorkflowRuns = async args => ({data: {
+    total_count: 1,
+    workflow_runs: args.workflow_id === 'dependency-checksums.yml' ? [{id: 789, workflow_id: 123,
+      status: 'completed', conclusion: 'success', event: 'workflow_dispatch',
+      head_repository: {full_name: repository}, head_sha: 'old', head_branch: current.head.ref}] : [],
+  }});
+  await manage({...options, context: {...context, eventName: 'schedule'}});
+  assert.deepEqual(JSON.parse(calls.outputs.checksum_candidates), [{number: 10, sha: 'old', run_id: 789}]);
+});
+
+test('failed build completion events do not cause immediate checksum retry loops', async () => {
+  for (const eventName of ['workflow_run', 'schedule', 'workflow_dispatch']) {
+    const {options} = managementFixture(null);
+    const {github} = options;
+    const dispatches = [];
+    const current = {...pr(), number: 10, auto_merge: {}};
+    github.rest.pulls.get = async () => ({data: current});
+    github.paginate = async fn => fn === github.rest.pulls.list
+      ? [{number: 10, user: current.user}] : [{filename: 'bridge/go.mod', status: 'modified'}];
+    github.rest.actions.listWorkflowRuns = async args => ({data: {
+      total_count: args.status === 'success' ? 0 : 1,
+      workflow_runs: args.status === 'success' ? [] : [{status: 'completed', conclusion: 'failure'}],
+    }});
+    github.rest.actions.createWorkflowDispatch = async args => dispatches.push(args);
+    await manage({...options, context: {...context, eventName}});
+    assert.deepEqual(dispatches.map(d => d.workflow_id), eventName === 'workflow_run'
+      ? [] : ['dependency-checksums.yml']);
   }
 });
 
