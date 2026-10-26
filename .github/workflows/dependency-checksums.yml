@@ -1,0 +1,46 @@
+name: Dependabot bridge checksums
+
+on:
+  pull_request:
+    paths:
+      - bridge/go.mod
+      - bridge/go.sum
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-checksums-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.user.login == 'dependabot[bot]' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/dependabot/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Both event types use the PR's security/cache context, with no write token.
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache: false
+      - run: python3 scripts/package_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-checksums
+          path: custom_components/tuya_camera_bridge/bridge_checksums.json
+          retention-days: 1
