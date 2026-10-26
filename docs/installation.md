@@ -27,8 +27,10 @@ the renamed integration.
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
 1. Open **HACS**, search for **Tuya Camera** and open its repository page.
-2. Download the latest stable release. Enable beta versions only for prereleases.
-3. Restart HA, then add **Tuya Camera** in Devices & services.
+2. Choose stable **0.3.x** for **Tuya Camera Bridge**, or enable beta versions
+   and select **0.4.0b2** for **Tuya Camera**. Download the selected release.
+3. Restart HA, then add **Tuya Camera Bridge** for stable 0.3.x or **Tuya Camera**
+   for beta 0.4.0b2 in Devices & services.
 4. Select the app that owns the account and enter its credentials and country
    calling code. These app namespaces are different; choose the correct one.
 5. Open a discovered camera. Wake-up and the first HLS segment can take several

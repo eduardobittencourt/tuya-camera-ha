@@ -62,9 +62,10 @@ this release. Earlier releases appear as **Tuya Camera Bridge**; existing users
 must follow the [domain change procedure](docs/installation.md#updates-and-rediscovery).
 
 1. Open **HACS** and search for **Tuya Camera**.
-2. Open the repository, download the latest stable release and restart Home Assistant.
-   Beta versions do not need to be enabled.
-3. Open **Settings → Devices & services → Add integration → Tuya Camera**.
+2. Choose the release: stable **0.3.x** uses **Tuya Camera Bridge**; enable beta
+   versions and select **0.4.0b2** for **Tuya Camera**. Download and restart HA.
+3. Open **Settings → Devices & services → Add integration** and select
+   **Tuya Camera Bridge** for stable 0.3.x, or **Tuya Camera** for beta 0.4.0b2.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
    and country calling code as the app (`55` for Brazil).
 5. Open a discovered camera and enable sound in the player.
@@ -73,8 +74,9 @@ Use a **published release**. A draft release is not downloadable by the public. 
 needs access to GitHub and Python package indexes for its declared dependencies.
 It does not download an architecture-specific protocol executable. See [installation and migration](docs/installation.md).
 
-Already installed through a custom repository? Keep the existing installation
-and update through HACS as usual; no reinstall or account reconfiguration is needed.
+Already installed under `tuya_camera_bridge`, including through a custom
+repository? Follow the [domain change procedure](docs/installation.md#updates-and-rediscovery)
+before switching to 0.4.0b2. Ordinary HACS updates apply within the same domain.
 
 ## Tested cameras
 

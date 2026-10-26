@@ -22,9 +22,14 @@ makes it available to HACS users who enable beta versions.
 
 Never replace published assets or reuse a version for different code. Publish
 a new beta for corrections. A beta does not advance the stable release channel.
-Verify installation/update through HACS after publication. Existing entries,
-entity IDs and automations must survive the update; no user keys or YAML are
-required. Rollback uses a previously published version and a Core restart.
+Verify installation/update through HACS after publication. Updates within the
+same domain must preserve existing entries, entity IDs and automations; no user
+keys or YAML are required. The 0.4.0b2 change from `tuya_camera_bridge` to
+`tuya_camera` requires an explicit reinstall or offline registry migration as
+described in [installation](installation.md#updates-and-rediscovery). A file
+update and restart alone do not migrate the domain. Rollback across that change
+also requires a reinstall or inverse offline registry migration; selecting the
+former-domain release in HACS and restarting is insufficient.
 
 The repository is in the HACS default catalog. No new catalog PR is required.
 `hacs.json` selects the ZIP. Branding remains in the integration's `brand/`
