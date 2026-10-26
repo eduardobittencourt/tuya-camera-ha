@@ -106,3 +106,30 @@ async def test_shutdown_during_disconnected_reader_cleanup(socket_enabled):
     await asyncio.wait_for(closing.wait(), 1)
     await asyncio.wait_for(server.stop(), 1)
     assert not server.tasks and not source.consumers and source.session is None
+
+
+async def test_failed_session_rejects_overlapping_reader_then_reconnects():
+    failed, replacement = AsyncMock(), AsyncMock()
+    for session in (failed, replacement):
+        session.failed = asyncio.Event()
+        session.hevc, session.audio_codec = False, "L16/8000/1"
+    factory = AsyncMock(side_effect=[failed, replacement])
+    source = MediaSource(factory, lambda: None)
+    old = await source.acquire()
+    failed.failed.set()
+    # Test before the monitor gets a chance to notify existing readers.
+    with pytest.raises(ConnectionError, match="recovering"):
+        await source.acquire()
+    assert source.consumers == {old}
+    assert await asyncio.wait_for(old.get(), 1) is None
+    await source.release(old)
+    failed.close.assert_awaited_once()
+    new = await source.acquire()
+    try:
+        assert source.session is replacement
+        assert source.consumers == {new}
+        assert factory.await_count == 2
+        replacement.close.assert_not_awaited()
+    finally:
+        await source.release(new)
+    replacement.close.assert_awaited_once()
