@@ -1,6 +1,7 @@
 name: Camera compatibility / Compatibilidade
 description: Tell us which camera and firmware you tested, including partial failures.
 title: "[Camera]: "
+labels: [compatibility]
 body:
   - type: markdown
     attributes:

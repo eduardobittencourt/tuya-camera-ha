@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Configure weekly Dependabot updates for Actions, Python and Go, label camera
+  compatibility reports, and document protected branches/tags and the merge policy.
 - Update English and Brazilian Portuguese installation instructions and badges
   for the HACS default catalog, including guidance for existing installations.
 - Refresh stable-release links to 0.3.4 and document ongoing catalog maintenance.

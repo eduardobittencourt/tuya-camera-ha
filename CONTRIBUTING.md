@@ -33,3 +33,23 @@ when changing vendored code.
 Keep PRs focused and explain the user-visible problem and resulting behavior.
 Real-camera tests are useful, but never make CI depend on someone's Tuya account.
 Maintainers review contributions as time permits.
+
+## Merge and dependency updates
+
+The protected `main` branch requires a pull request, resolved review conversations
+and passing Python, Go, synthetic-media, secret-scanning, HACS and hassfest checks
+against the current base branch. No mandatory approval count is configured, so
+the sole maintainer can merge their own checked contributions. Pull requests use
+squash merge; merged branches are deleted automatically. Auto-merge is available
+after the required checks pass, but is not enabled automatically for dependency PRs.
+
+Dependabot checks GitHub Actions, Python and `bridge/` Go dependencies weekly,
+grouping minor/patch version updates per ecosystem and limiting open version-update
+PRs to three per ecosystem. Security alerts and security-update PRs are also enabled.
+Review Home Assistant and its pytest plugin together for compatibility. Go module
+updates can change executable hashes and need the same release-version and binary
+manifest review as other bridge changes; do not bypass reproducibility checks.
+
+Version tags matching `v*` cannot be updated or deleted. Publish fixes under a new
+version. CodeQL analyzes Python, Go and GitHub Actions through GitHub's default
+setup, separately from the required CI jobs.
