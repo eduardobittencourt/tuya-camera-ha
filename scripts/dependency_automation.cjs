@@ -14,6 +14,12 @@ function goOnly(files) {
     && files.every(f => GO_FILES.has(f.filename) && f.status === 'modified');
 }
 
+function recoverable(error) {
+  return [404, 405, 409, 422].includes(error.status)
+    || (error.name === 'GraphqlResponseError' && error.errors?.length > 0
+      && error.errors.every(item => ['UNPROCESSABLE', 'NOT_FOUND', 'CONFLICT'].includes(item.type)));
+}
+
 function validateManifest(value, version) {
   const names = ['tuya-camera-bridge-linux-amd64', 'tuya-camera-bridge-linux-arm64'];
   if (!value || Object.keys(value).sort().join(',') !== 'sha256,version'
@@ -101,10 +107,10 @@ async function manage({github, context, core}) {
   core.setOutput('checksum_candidate', candidate ? JSON.stringify(candidate) : '');
   for (const entry of prs) {
     if (entry.user.login !== 'dependabot[bot]') continue;
-    const {data: pr} = await github.rest.pulls.get({...repo, pull_number: entry.number});
-    if (!eligible(pr, repository)) continue;
     try {
-      if (!pr.auto_merge) {
+      const {data: pr} = await github.rest.pulls.get({...repo, pull_number: entry.number});
+      if (!eligible(pr, repository)) continue;
+      if (!pr.auto_merge && !['unknown', 'dirty'].includes(pr.mergeable_state)) {
         if (pr.mergeable_state === 'clean') {
           // GitHub only offers auto-merge while requirements are outstanding.
           // The normal merge endpoint still enforces every repository rule.
@@ -145,8 +151,8 @@ async function manage({github, context, core}) {
       }
     } catch (error) {
       // Conflicts and concurrent merges should not prevent other PRs progressing.
-      if ([404, 405, 409, 422].includes(error.status)) {
-        core.warning(`PR #${pr.number} changed or needs manual conflict resolution (${error.status}).`);
+      if (recoverable(error)) {
+        core.warning(`PR #${entry.number} changed or cannot progress yet (${error.status ?? error.name}).`);
       } else {
         throw error;
       }

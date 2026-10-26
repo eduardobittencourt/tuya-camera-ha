@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
-  checksumCandidate, publish, releaseGate} =
+  checksumCandidate, manage, publish, releaseGate} =
   require('../scripts/dependency_automation.cjs');
 
 const repository = 'owner/camera';
@@ -106,6 +106,71 @@ test('stale build results cannot write to a changed or closed PR', async () => {
     change(current);
     const github = {rest: {pulls: {get: async () => ({data: current})}}};
     await publish({github, context, core: {info() {}}}, candidate, checksums);
+  }
+});
+
+function managementFixture(problem, state = 'blocked') {
+  const calls = {merged: [], warnings: [], branches: 0, graphql: 0};
+  const github = {rest: {
+    repos: {
+      getBranch: async () => {calls.branches++; return {data: {commit: {sha: 'main'}}};},
+      compareCommitsWithBasehead: async () => ({data: {behind_by: 0}}),
+    },
+    pulls: {
+      list() {}, listFiles() {},
+      get: async ({pull_number}) => {
+        if (pull_number === 1 && problem?.status === 404) throw problem;
+        return {data: {...pr(), number: pull_number, node_id: String(pull_number),
+          mergeable_state: pull_number === 1 ? state : 'clean'}};
+      },
+      merge: async ({pull_number}) => calls.merged.push(pull_number),
+    },
+    actions: {listWorkflowRuns: async () => ({data: {total_count: 1}})},
+  },
+  graphql: async () => {calls.graphql++; if (problem) throw problem;},
+  paginate: async fn => fn === github.rest.pulls.list
+    ? [1, 2].map(number => ({number, user: {login: 'dependabot[bot]'}}))
+    : [{filename: 'pyproject.toml', status: 'modified'}]};
+  const core = {setOutput() {}, info() {}, warning: message => calls.warnings.push(message)};
+  return {options: {github, context, core}, calls};
+}
+
+test('a rejected auto-merge does not block later PRs or final main checks', async () => {
+  for (const type of ['UNPROCESSABLE', 'NOT_FOUND', 'CONFLICT']) {
+    const error = Object.assign(new Error('rejected'), {
+      name: 'GraphqlResponseError', errors: [{type}],
+    });
+    const {options, calls} = managementFixture(error);
+    await manage(options);
+    assert.deepEqual(calls.merged, [2]);
+    assert.equal(calls.warnings.length, 1);
+    assert.equal(calls.branches, 2);
+  }
+});
+
+test('a PR closed during enumeration does not block later PRs', async () => {
+  const {options, calls} = managementFixture({status: 404});
+  await manage(options);
+  assert.deepEqual(calls.merged, [2]);
+  assert.equal(calls.warnings.length, 1);
+});
+
+test('unknown or conflicting mergeability does not attempt auto-merge activation', async () => {
+  for (const state of ['unknown', 'dirty']) {
+    const {options, calls} = managementFixture(null, state);
+    await manage(options);
+    assert.equal(calls.graphql, 0);
+    assert.deepEqual(calls.merged, [2]);
+  }
+});
+
+test('authentication, schema and unexpected GraphQL failures stay visible', async () => {
+  for (const problem of [{status: 401}, {status: 500},
+    {name: 'GraphqlResponseError', errors: [{type: 'FORBIDDEN'}]},
+    {name: 'GraphqlResponseError', errors: [{message: 'invalid query'}]}]) {
+    const {options, calls} = managementFixture(problem);
+    await assert.rejects(manage(options));
+    assert.deepEqual(calls.merged, []);
   }
 });
 
