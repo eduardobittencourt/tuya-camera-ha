@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {eligible, goOnly, validateManifest, dispatchChecks, dispatchChecksumBuild,
-  checksumCandidate, manage, publish, releaseGate} =
+  approveBotChecks, checksumCandidate, manage, publish, releaseGate} =
   require('../scripts/dependency_automation.cjs');
 
 const repository = 'owner/camera';
@@ -95,6 +95,33 @@ test('checksum retries only dispatch completed failures when retry is allowed', 
   }
 });
 
+test('approval starts only known pending workflows on the exact same-repository bot PR head', async () => {
+  const current = {...pr(), number: 10};
+  const original = {id: 456, event: 'pull_request', conclusion: 'action_required',
+    actor: {login: 'github-actions[bot]'}, head_sha: 'old', head_branch: current.head.ref,
+    head_repository: {full_name: repository}, pull_requests: [{number: 10}]};
+  for (const change of [null, run => run.actor = {login: 'someone'},
+    run => run.head_sha = 'other', run => run.head_branch = 'other',
+    run => run.head_repository = {full_name: 'fork/camera'}, run => run.pull_requests = [{number: 20}],
+    run => run.event = 'workflow_dispatch', run => run.conclusion = 'success']) {
+    const run = {...original};
+    if (change) change(run);
+    const calls = [];
+    const github = {rest: {actions: {
+      listWorkflowRuns: async args => {
+        assert.ok(['ci.yml', 'validate.yml'].includes(args.workflow_id));
+        assert.equal(args.head_sha, 'old');
+        assert.equal(args.status, 'action_required');
+        return {data: {workflow_runs: [run]}};
+      },
+      approveWorkflowRun: async args => calls.push(args.run_id),
+    }}};
+    await approveBotChecks(github, context.repo, current);
+    assert.deepEqual(calls, change ? [] : [456, 456]);
+  }
+  await approveBotChecks({}, context.repo, {...current, user: {login: 'someone'}});
+});
+
 test('privileged publication rejects foreign, failed, forged and stale build runs', async () => {
   const original = {id: 789, status: 'completed', conclusion: 'success', head_repository: {full_name: repository},
     event: 'workflow_dispatch', workflow_id: 123, head_sha: 'old', head_branch: pr().head.ref};
@@ -161,6 +188,32 @@ function managementFixture(problem, state = 'blocked') {
     info() {}, warning: message => calls.warnings.push(message)};
   return {options: {github, context, core}, calls};
 }
+
+test('maintenance approves held checks only after confirming the current PR head', async () => {
+  for (const changed of [false, true]) {
+    const {options} = managementFixture(null);
+    const {github} = options;
+    let reads = 0;
+    let approvalQueries = 0;
+    github.rest.pulls.get = async () => {
+      reads++;
+      const current = {...pr(), number: 1, auto_merge: {}};
+      if (changed && reads > 1) current.head.sha = 'new';
+      return {data: current};
+    };
+    github.paginate = async fn => fn === github.rest.pulls.list
+      ? [{number: 1, user: pr().user}] : [];
+    github.rest.actions.listWorkflowRuns = async args => {
+      if (args.status === 'action_required') {
+        assert.equal(reads, 2);
+        approvalQueries++;
+      }
+      return {data: {total_count: 1, workflow_runs: []}};
+    };
+    await manage(options);
+    assert.equal(approvalQueries, changed ? 0 : 2);
+  }
+});
 
 test('a rejected auto-merge does not block later PRs or final main checks', async () => {
   for (const type of ['UNPROCESSABLE', 'NOT_FOUND', 'CONFLICT']) {
