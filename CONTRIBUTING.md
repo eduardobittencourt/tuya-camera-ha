@@ -37,7 +37,7 @@ Maintainers review contributions as time permits.
 ## Merge and dependency updates
 
 The protected `main` branch requires a pull request, resolved review conversations
-and passing Python, Go, synthetic-media, secret-scanning, HACS and hassfest checks
+and passing Python, Go, synthetic-media, secret-scanning, HACS, hassfest and CodeQL checks
 against the current base branch. No mandatory approval count is configured, so
 the sole maintainer can merge their own checked contributions. Pull requests use
 squash merge; merged branches are deleted automatically. Auto-merge is available
@@ -64,4 +64,4 @@ validation remain part of [release preparation](docs/releasing.md).
 
 Version tags matching `v*` cannot be updated or deleted. Publish fixes under a new
 version. CodeQL analyzes Python, Go and GitHub Actions through GitHub's default
-setup, separately from the required CI jobs.
+setup; its aggregate security result is also required before merge.
