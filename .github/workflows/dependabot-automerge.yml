@@ -31,7 +31,7 @@ jobs:
       checksum_candidates: ${{ steps.manage.outputs.checksum_candidates }}
     steps:
       # Privileged jobs load scripts from the default branch, never a PR.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false
@@ -56,7 +56,7 @@ jobs:
       pull-requests: read
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false
