@@ -1,0 +1,103 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [CI, HACS and Home Assistant validation]
+    types: [completed]
+  schedule:
+    - cron: "43 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dependabot-maintenance
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  manage:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    outputs:
+      builds: ${{ steps.manage.outputs.builds }}
+    steps:
+      # Privileged jobs load scripts from the default branch, never a PR.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/github-script@v9
+        id: manage
+        with:
+          script: |
+            const {manage} = require('./scripts/dependency_automation.cjs');
+            await manage({github, context, core});
+
+  checksums:
+    needs: manage
+    if: needs.manage.outputs.builds != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.manage.outputs.builds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Isolated build: no secrets, persisted credentials or shared build cache.
+      # manage allows only go.mod, go.sum and the checksum manifest to differ.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.pr.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache: false
+      - run: python3 scripts/package_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checksums-${{ matrix.pr.number }}
+          path: custom_components/tuya_camera_bridge/bridge_checksums.json
+          retention-days: 1
+
+  publish-checksums:
+    needs: [manage, checksums]
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.manage.outputs.builds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: checksums-${{ matrix.pr.number }}
+          path: generated-checksums
+      - uses: actions/github-script@v9
+        env:
+          CANDIDATE: ${{ toJSON(matrix.pr) }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const {publish} = require('./scripts/dependency_automation.cjs');
+            const value = JSON.parse(fs.readFileSync('generated-checksums/bridge_checksums.json', 'utf8'));
+            await publish({github, context, core}, JSON.parse(process.env.CANDIDATE), value);

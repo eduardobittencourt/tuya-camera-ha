@@ -5,12 +5,22 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   draft:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require successful checks on this exact release commit
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const {releaseGate} = require('./scripts/dependency_automation.cjs');
+            await releaseGate({github, context});
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26.8"
