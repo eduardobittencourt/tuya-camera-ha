@@ -78,12 +78,12 @@ Downgrading to the former domain also requires a reinstall or an inverse offline
 migration. Selecting an older release in HACS alone does not change account or
 registry domains.
 
-For this beta, the validated HACS installation required operator reconciliation
-of this repository’s cached metadata and an explicit **v0.4.0b2** selection.
-Keep that selection while the stable channel still describes the former domain;
-no HACS source patch is needed. This is a beta transition limitation, not an
-automatic migration feature. Subsequent releases under the same domain should
-follow the normal update/restart path after this cache transition is resolved.
+If HACS retains the former domain or ZIP, use the manual ZIP fallback above and
+contact the [maintainers](../SUPPORT.md) for assistance before restoring HACS
+tracking. Cache reconciliation and explicit release selection currently require
+maintainer assistance; a general self-service procedure is not provided in this
+beta. Subsequent releases under the same domain should follow the normal
+update/restart path after this cache transition is resolved.
 Never reuse a published version for different code.
 
 Use **Reconfigure** on the integration entry to sign in again and refresh the
