@@ -21,7 +21,7 @@ jobs:
           script: |
             const {releaseGate} = require('./scripts/dependency_automation.cjs');
             await releaseGate({github, context});
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.26.8"
           cache-dependency-path: bridge/go.sum
