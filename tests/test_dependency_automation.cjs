@@ -137,7 +137,10 @@ function managementFixture(problem, state = 'blocked') {
   const github = {rest: {
     repos: {
       getBranch: async () => {calls.branches++; return {data: {commit: {sha: 'main'}}};},
-      compareCommitsWithBasehead: async () => ({data: {behind_by: 0}}),
+      compareCommitsWithBasehead: async args => {
+        assert.equal(args.basehead, 'main...old');
+        return {data: {behind_by: 0}};
+      },
     },
     pulls: {
       list() {}, listFiles() {},
