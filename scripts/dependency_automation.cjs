@@ -127,7 +127,6 @@ async function manage({github, context, core}) {
     try {
       const {data: pr} = await github.rest.pulls.get({...repo, pull_number: entry.number});
       if (!eligible(pr, repository)) continue;
-      await approveBotChecks(github, repo, pr);
       if (!pr.auto_merge && !['unknown', 'dirty'].includes(pr.mergeable_state)) {
         if (pr.mergeable_state === 'clean') {
           // GitHub only offers auto-merge while requirements are outstanding.
@@ -162,6 +161,7 @@ async function manage({github, context, core}) {
       // Recheck the immutable head after the paginated file list.
       const {data: current} = await github.rest.pulls.get({...repo, pull_number: pr.number});
       if (current.head.sha !== pr.head.sha) continue;
+      await approveBotChecks(github, repo, current);
       if (await needsChecksums(github, repo, pr, files)) {
         const candidate = await checksumCandidate(github, context, pr, files);
         if (candidate) candidates.push(candidate);

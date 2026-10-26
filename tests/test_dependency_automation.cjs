@@ -189,6 +189,32 @@ function managementFixture(problem, state = 'blocked') {
   return {options: {github, context, core}, calls};
 }
 
+test('maintenance approves held checks only after confirming the current PR head', async () => {
+  for (const changed of [false, true]) {
+    const {options} = managementFixture(null);
+    const {github} = options;
+    let reads = 0;
+    let approvalQueries = 0;
+    github.rest.pulls.get = async () => {
+      reads++;
+      const current = {...pr(), number: 1, auto_merge: {}};
+      if (changed && reads > 1) current.head.sha = 'new';
+      return {data: current};
+    };
+    github.paginate = async fn => fn === github.rest.pulls.list
+      ? [{number: 1, user: pr().user}] : [];
+    github.rest.actions.listWorkflowRuns = async args => {
+      if (args.status === 'action_required') {
+        assert.equal(reads, 2);
+        approvalQueries++;
+      }
+      return {data: {total_count: 1, workflow_runs: []}};
+    };
+    await manage(options);
+    assert.equal(approvalQueries, changed ? 0 : 2);
+  }
+});
+
 test('a rejected auto-merge does not block later PRs or final main checks', async () => {
   for (const type of ['UNPROCESSABLE', 'NOT_FOUND', 'CONFLICT']) {
     const error = Object.assign(new Error('rejected'), {
