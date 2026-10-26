@@ -79,3 +79,30 @@ async def test_disconnect_cancels_pending_camera_negotiation(socket_enabled):
         assert not source.consumers and source.session is None
     finally:
         await server.stop()
+
+
+async def test_shutdown_during_disconnected_reader_cleanup(socket_enabled):
+    closing = asyncio.Event()
+    calls = 0
+    async def close():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            closing.set()
+            await asyncio.sleep(60)
+    session = AsyncMock()
+    session.close.side_effect = close
+    session.failed = asyncio.Event()
+    session.hevc, session.audio_codec = False, "L16/8000/1"
+    source = MediaSource(AsyncMock(return_value=session), lambda: None)
+    server = RtspServer({"/camera": source})
+    await server.start()
+    reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+    writer.write(f"DESCRIBE rtsp://127.0.0.1:{server.port}/camera RTSP/1.0\r\nCSeq: 1\r\n\r\n".encode())
+    await writer.drain()
+    assert b"200 OK" in await reader.readuntil(b"\r\n\r\n")
+    writer.close()
+    await writer.wait_closed()
+    await asyncio.wait_for(closing.wait(), 1)
+    await asyncio.wait_for(server.stop(), 1)
+    assert not server.tasks and not source.consumers and source.session is None

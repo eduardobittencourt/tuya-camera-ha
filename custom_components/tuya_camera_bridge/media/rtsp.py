@@ -93,6 +93,7 @@ class MediaSource:
                     queue.get_nowait()
                 queue.put_nowait(None)
             await self._stop()
+            self.consumers.clear()
 
     def packet(self, kind: str, payload: bytes, timestamp: int, marker: bool):
         if kind == "video":
@@ -162,6 +163,7 @@ class RtspServer:
     async def _accept(self, reader, writer):
         task = asyncio.current_task()
         self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         source = queue = sender = None
         channels = {}
         session = secrets.token_hex(12)
@@ -253,6 +255,7 @@ class RtspServer:
         except (OSError, ValueError, TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
             pass
         finally:
+            writer.close()  # Close even if a second cancellation interrupts session cleanup.
             if sender:
                 sender.cancel()
                 await asyncio.gather(sender, return_exceptions=True)

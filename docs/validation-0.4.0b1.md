@@ -6,12 +6,12 @@ IDs. It does not promise universal model support or fully offline operation.
 
 ## Automated validation
 
-70 Python tests and three actual synthetic-media tests passed.
+71 Python tests and three actual synthetic-media tests passed.
 The Python 3.14 test environment uses HA 2026.10.2, its matching pytest plugin
 0.13.373 and PyAV 19.0.2. Ruff, Python dependency consistency and deterministic
 archive checks pass. Protocol tests cover signal framing and corruption,
 AES padding, KCP wire layout/loss/duplicates/reordering/retransmission, bounded
-buffers, MAC-based address resolution and cancellation during negotiation.
+buffers, repeated cancellation during RTSP shutdown, MAC-based address resolution and cancellation during negotiation.
 
 Synthetic aiortc peers cover H.264 RTP and the H.265 RTP/datachannel handshake,
 including little-to-big-endian PCM conversion and filtering unusable ICE
