@@ -14,7 +14,7 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/eduardobittencourt/tuya-camera-ha/issues",
   "requirements": [
-    "aiortc @ https://github.com/aiortc/aiortc/archive/10ccd168528d93996d013d0ecfae679c3a764b68.zip",
+    "aiortc@https://github.com/aiortc/aiortc/archive/10ccd168528d93996d013d0ecfae679c3a764b68.zip",
     "paho-mqtt==2.1.0",
     "tinytuya==1.20.0"
   ],
