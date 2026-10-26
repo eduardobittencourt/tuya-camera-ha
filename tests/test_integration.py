@@ -10,9 +10,9 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry, mock_restore_cache_with_extra_data
 
-from custom_components.tuya_camera_bridge import async_migrate_entry
-from custom_components.tuya_camera_bridge.config_flow import entry_data
-from custom_components.tuya_camera_bridge.const import DOMAIN
+from custom_components.tuya_camera import async_migrate_entry
+from custom_components.tuya_camera.config_flow import entry_data
+from custom_components.tuya_camera.const import DOMAIN
 
 from .test_config_flow import LOGIN
 from .test_lan import BATTERY_CAMERA, KEY, SCHEMA
@@ -29,7 +29,7 @@ async def test_setup_creates_native_cameras_and_unload_stops_every_process(hass,
     bridge.sources = {item["camera_id"]: {"hevc": False} for item in data["cameras"]}
     bridge.source_url.side_effect = lambda cid: f"rtsp://127.0.0.1:1234/{cid}"
     with patch.object(FFmpegManager, "async_get_version", return_value=("7.0.2", 7)), \
-         patch("custom_components.tuya_camera_bridge.MediaRuntime", return_value=bridge):
+         patch("custom_components.tuya_camera.MediaRuntime", return_value=bridge):
         assert await async_setup_component(hass, "ffmpeg", {})
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -124,10 +124,10 @@ async def test_lan_entities_follow_schema_and_ha_services_use_only_local_command
         await asyncio.Event().wait()
 
     with patch.object(FFmpegManager, "async_get_version", return_value=("7.0.2", 7)), \
-         patch("custom_components.tuya_camera_bridge.MediaRuntime", return_value=bridge), \
-         patch("custom_components.tuya_camera_bridge.lan.LocalCamera.start", start), \
-         patch("custom_components.tuya_camera_bridge.transcoder.FfmpegRelay.control_session", control_session), \
-         patch("custom_components.tuya_camera_bridge.api.TuyaCameraApi.async_prepare_local_controls") as cloud:
+         patch("custom_components.tuya_camera.MediaRuntime", return_value=bridge), \
+         patch("custom_components.tuya_camera.lan.LocalCamera.start", start), \
+         patch("custom_components.tuya_camera.transcoder.FfmpegRelay.control_session", control_session), \
+         patch("custom_components.tuya_camera.api.TuyaCameraApi.async_prepare_local_controls") as cloud:
         assert await async_setup_component(hass, "ffmpeg", {})
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

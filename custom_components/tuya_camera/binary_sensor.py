@@ -3,7 +3,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 
-from .const import CONF_CAMERAS
+from .const import CONF_CAMERAS, DOMAIN
 from .entity import LocalEntity
 
 
@@ -19,7 +19,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     entity._attr_entity_registry_enabled_default = False
                     if not entry.data.get("confirmed_entities_policy"):
                         registry = er.async_get(hass)
-                        entity_id = registry.async_get_entity_id("binary_sensor", "tuya_camera_bridge", entity.unique_id)
+                        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, entity.unique_id)
                         registered = registry.async_get(entity_id) if entity_id else None
                         if registered and registered.disabled_by is None:
                             registry.async_update_entity(entity_id, disabled_by=er.RegistryEntryDisabler.INTEGRATION)

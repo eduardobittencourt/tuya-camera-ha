@@ -10,7 +10,7 @@ uv pip install '.[test]'
 .venv/bin/ruff check custom_components tests scripts
 .venv/bin/pytest -m 'not media'
 .venv/bin/python scripts/package_release.py
-.venv/bin/python scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
+.venv/bin/python scripts/check_repository.py --archive dist/tuya_camera.zip
 node --test tests/test_release_gate.cjs
 ```
 

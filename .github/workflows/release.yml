@@ -22,12 +22,12 @@ jobs:
             const {releaseGate} = require('./scripts/release_gate.cjs');
             await releaseGate({github, context});
       - run: python3 scripts/package_release.py
-      - run: python3 scripts/check_repository.py --archive dist/tuya_camera_bridge.zip
+      - run: python3 scripts/check_repository.py --archive dist/tuya_camera.zip
       - name: Prepare a draft release for review
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=$(python3 -c 'import json; print(json.load(open("custom_components/tuya_camera_bridge/manifest.json"))["version"])')
+          version=$(python3 -c 'import json; print(json.load(open("custom_components/tuya_camera/manifest.json"))["version"])')
           tag="v${version}"
           prerelease=true
           if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -36,10 +36,10 @@ jobs:
           if gh release view "${tag}" --json isDraft > /tmp/tuya-release.json; then
             python3 -c 'import json; assert json.load(open("/tmp/tuya-release.json"))["isDraft"], "Refusing to overwrite a published release"'
             gh release edit "${tag}" --draft --prerelease="${prerelease}" --target "${GITHUB_SHA}" \
-              --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
+              --title "Tuya Camera ${version}" --notes-file CHANGELOG.md
             gh release upload "${tag}" dist/* --clobber
           else
             gh release create "${tag}" dist/* \
               --draft --prerelease="${prerelease}" --target "${GITHUB_SHA}" \
-              --title "Tuya Camera Bridge ${version}" --notes-file CHANGELOG.md
+              --title "Tuya Camera ${version}" --notes-file CHANGELOG.md
           fi

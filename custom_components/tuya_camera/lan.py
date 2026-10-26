@@ -177,7 +177,7 @@ class LocalCamera:
         if self._stopping.is_set():
             return
         self._media_users = max(0, self._media_users + (1 if active else -1))
-        # Match the bridge's existing 30-second shutdown grace, without extending it.
+        # Retain the existing 30-second shutdown grace, without extending it.
         self._media_until = time.monotonic() + 30
         self._wake.set()
 

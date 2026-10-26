@@ -12,8 +12,8 @@ from homeassistant.components.stream import create_stream
 from homeassistant.components.stream.const import HLS_PROVIDER
 from homeassistant.setup import async_setup_component
 
-from custom_components.tuya_camera_bridge.process import stop_process
-from custom_components.tuya_camera_bridge.transcoder import FfmpegRelay
+from custom_components.tuya_camera.process import stop_process
+from custom_components.tuya_camera.transcoder import FfmpegRelay
 
 pytestmark = pytest.mark.media
 

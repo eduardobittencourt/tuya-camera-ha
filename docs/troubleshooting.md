@@ -7,9 +7,9 @@ review any attachment before publishing it.
 
 ## Integration does not appear after download
 
-Restart HA and search for **Tuya Camera Bridge** in Devices & services. For a
+Restart HA and search for **Tuya Camera** in Devices & services. For a
 manual install, confirm `manifest.json` is directly inside
-`custom_components/tuya_camera_bridge/`. Check the minimum HA version.
+`custom_components/tuya_camera/`. Check the minimum HA version.
 
 ## Python dependency installation fails
 

@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from custom_components.tuya_camera_bridge.transcoder import FfmpegRelay
+from custom_components.tuya_camera.transcoder import FfmpegRelay
 
 
 def test_h264_is_copied_and_audio_is_retained():

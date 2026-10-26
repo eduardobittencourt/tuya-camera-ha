@@ -11,11 +11,11 @@ import av
 import pytest
 from aioice import stun
 
-from custom_components.tuya_camera_bridge.media import lan
-from custom_components.tuya_camera_bridge.media.crypto import authenticate, pack_signal, seal, unpack_signal
-from custom_components.tuya_camera_bridge.media.kcp import KCP
-from custom_components.tuya_camera_bridge.media.rtsp import MediaSource, RtspServer
-from custom_components.tuya_camera_bridge.transcoder import FfmpegRelay
+from custom_components.tuya_camera.media import lan
+from custom_components.tuya_camera.media.crypto import authenticate, pack_signal, seal, unpack_signal
+from custom_components.tuya_camera.media.kcp import KCP
+from custom_components.tuya_camera.media.rtsp import MediaSource, RtspServer
+from custom_components.tuya_camera.transcoder import FfmpegRelay
 
 pytestmark = pytest.mark.media
 KEY = b"0123456789abcdef"

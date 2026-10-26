@@ -5,7 +5,7 @@ import zlib
 
 import pytest
 
-from custom_components.tuya_camera_bridge.media.crypto import (
+from custom_components.tuya_camera.media.crypto import (
     decrypt,
     encrypt,
     open_media,
@@ -13,8 +13,8 @@ from custom_components.tuya_camera_bridge.media.crypto import (
     seal,
     unpack_signal,
 )
-from custom_components.tuya_camera_bridge.media.kcp import HEADER, KCP
-from custom_components.tuya_camera_bridge.media.rtsp import MediaSource
+from custom_components.tuya_camera.media.kcp import HEADER, KCP
+from custom_components.tuya_camera.media.rtsp import MediaSource
 
 KEY = b"0123456789abcdef"
 
@@ -118,7 +118,7 @@ async def test_cancelled_source_start_releases_session_and_consumer():
 
 
 def test_camera_address_follows_only_exact_private_mac(monkeypatch):
-    from custom_components.tuya_camera_bridge.media.lan import resolve_host
+    from custom_components.tuya_camera.media.lan import resolve_host
     monkeypatch.setattr("pathlib.Path.read_text", lambda _: "192.168.0.22 0 0 aa:bb:cc:dd:ee:ff 0 eth0\n203.0.113.5 0 0 aa:bb:cc:dd:ee:01 0 eth0")
     assert resolve_host({"mac": "AA-BB-CC-DD-EE-FF", "host": "192.168.0.10"}) == "192.168.0.22"
     assert resolve_host({"mac": "00:11:22:33:44:55", "host": "192.168.0.10"}) == "192.168.0.10"

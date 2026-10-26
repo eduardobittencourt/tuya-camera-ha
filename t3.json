@@ -1,4 +1,4 @@
 {
   "$schema": "https://t3.codes/schema/t3.json",
-  "iconPath": "custom_components/tuya_camera_bridge/brand/icon.png"
+  "iconPath": "custom_components/tuya_camera/brand/icon.png"
 }

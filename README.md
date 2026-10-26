@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="custom_components/tuya_camera_bridge/brand/logo.png" alt="Tuya" width="220">
+  <img src="custom_components/tuya_camera/brand/logo.png" alt="Tuya" width="220">
 </p>
 
-# Tuya Camera Bridge for Home Assistant
+# Tuya Camera for Home Assistant
 
 [![CI](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/ci.yml)
 [![HACS validation](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/eduardobittencourt/tuya-camera-ha/actions/workflows/validate.yml)
@@ -21,7 +21,7 @@ Python migration. See [architecture](docs/architecture.md).
 [Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
 [Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
 
-[Python beta validation](docs/validation-0.4.0b1.md)
+[Python beta validation](docs/validation-0.4.0b1.md) · [Rename beta validation](docs/validation-0.4.0b2.md)
 
 ## What you get
 
@@ -57,10 +57,15 @@ other Linux installations must provide a build with H.264/AAC encoding support.
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eduardobittencourt&repository=tuya-camera-ha&category=integration)
 
-1. Open **HACS** and search for **Tuya Camera Bridge**.
-2. Open the repository, download the latest stable release and restart Home Assistant.
-   Beta versions do not need to be enabled.
-3. Open **Settings → Devices & services → Add integration → Tuya Camera Bridge**.
+The new name/domain applies to **0.4.0b2 and later**. Enable beta versions for
+this release. Earlier releases appear as **Tuya Camera Bridge**; existing users
+must follow the [domain change procedure](docs/installation.md#updates-and-rediscovery).
+
+1. Open **HACS** and search for **Tuya Camera**.
+2. Choose the release: stable **0.3.x** uses **Tuya Camera Bridge**; enable beta
+   versions and select **0.4.0b2** for **Tuya Camera**. Download and restart HA.
+3. Open **Settings → Devices & services → Add integration** and select
+   **Tuya Camera Bridge** for stable 0.3.x, or **Tuya Camera** for beta 0.4.0b2.
 4. Select **Tuya Smart** or **Smart Life**, then enter the same account, password
    and country calling code as the app (`55` for Brazil).
 5. Open a discovered camera and enable sound in the player.
@@ -69,8 +74,9 @@ Use a **published release**. A draft release is not downloadable by the public. 
 needs access to GitHub and Python package indexes for its declared dependencies.
 It does not download an architecture-specific protocol executable. See [installation and migration](docs/installation.md).
 
-Already installed through a custom repository? Keep the existing installation
-and update through HACS as usual; no reinstall or account reconfiguration is needed.
+Already installed under `tuya_camera_bridge`, including through a custom
+repository? Follow the [domain change procedure](docs/installation.md#updates-and-rediscovery)
+before switching to 0.4.0b2. Ordinary HACS updates apply within the same domain.
 
 ## Tested cameras
 
@@ -128,4 +134,4 @@ Software is MIT licensed; original notices for aventproxy/Avent and the vendored
 `tuya-mobile` library are preserved. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 Tuya names and images belong to their respective owners. The project is not
-affiliated with or endorsed by Tuya or Home Assistant. [Image provenance](custom_components/tuya_camera_bridge/BRAND_ASSETS.md).
+affiliated with or endorsed by Tuya or Home Assistant. [Image provenance](custom_components/tuya_camera/BRAND_ASSETS.md).

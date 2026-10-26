@@ -1,8 +1,8 @@
 {
-  "name": "Tuya Camera Bridge",
+  "name": "Tuya Camera",
   "render_readme": true,
   "homeassistant": "2026.9.0",
   "zip_release": true,
-  "filename": "tuya_camera_bridge.zip",
+  "filename": "tuya_camera.zip",
   "hide_default_branch": true
 }

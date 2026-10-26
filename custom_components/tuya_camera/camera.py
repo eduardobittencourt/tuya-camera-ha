@@ -18,10 +18,10 @@ from .const import CONF_CAMERAS, DOMAIN
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
 ) -> None:
-    async_add_entities([TuyaBridgeCamera(entry, camera) for camera in entry.data[CONF_CAMERAS]])
+    async_add_entities([TuyaCamera(entry, camera) for camera in entry.data[CONF_CAMERAS]])
 
 
-class TuyaBridgeCamera(Camera):
+class TuyaCamera(Camera):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_supported_features = CameraEntityFeature.STREAM

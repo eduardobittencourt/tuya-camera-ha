@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from tinytuya.core import command_types as CT
 from tinytuya.core.message_helper import TuyaMessage, pack_message, parse_header, unpack_message
 
-from custom_components.tuya_camera_bridge.lan import LocalCamera, _private_call, discover, private_address
+from custom_components.tuya_camera.lan import LocalCamera, _private_call, discover, private_address
 
 KEY = "test-lan-key1234"
 SCHEMA = [
@@ -67,7 +67,7 @@ def test_occupied_discovery_socket_still_uses_exact_mac_in_arp():
 def test_discovery_does_not_require_scanner_export_on_tinytuya(monkeypatch):
     # TinyTuya's top-level package does not export scanner on a fresh import.
     # Mock's dotted-path resolver can import it implicitly and hide this bug.
-    from custom_components.tuya_camera_bridge.lan import scanner
+    from custom_components.tuya_camera.lan import scanner
 
     monkeypatch.delattr(tinytuya, "scanner", raising=False)
     monkeypatch.setattr(scanner, "devices", lambda **kwargs: {})
@@ -124,7 +124,7 @@ async def test_empty_heartbeat_does_not_disconnect_and_motion_pulse_expires(hass
         local._stopping.set()
 
     with patch.object(local, "_pause", AsyncMock(side_effect=stop_loop)), \
-         patch("custom_components.tuya_camera_bridge.lan.time", SimpleNamespace(monotonic=lambda: 5.0)):
+         patch("custom_components.tuya_camera.lan.time", SimpleNamespace(monotonic=lambda: 5.0)):
         await local._run()
     assert local.connected
     assert not local.motion
@@ -206,7 +206,7 @@ async def test_encrypted_local_camera_read_write_event_and_shutdown(hass, socket
     local = LocalCamera(hass, "entry", camera_config, "synthetic-account" if battery else "")
     local.media_activity(True)
     try:
-        with patch("custom_components.tuya_camera_bridge.lan.discover", return_value=("192.168.0.81", "3.3")), \
+        with patch("custom_components.tuya_camera.lan.discover", return_value=("192.168.0.81", "3.3")), \
              patch("tinytuya.Device", side_effect=device):
             assert await local._connect()
             if battery:
@@ -266,7 +266,7 @@ async def test_battery_idle_has_no_discovery_and_concurrent_media_share_one_sock
             await asyncio.sleep(0.001)
 
     with patch.object(local, "_pause", side_effect=pause), \
-         patch("custom_components.tuya_camera_bridge.lan.discover", return_value=("192.168.0.81", "3.3")) as discover_mock, \
+         patch("custom_components.tuya_camera.lan.discover", return_value=("192.168.0.81", "3.3")) as discover_mock, \
          patch("tinytuya.Device", return_value=device) as factory:
         await local.start()
         await asyncio.wait_for(idle.wait(), 1)
@@ -385,7 +385,7 @@ async def test_battery_write_drains_initial_reports_before_control(hass, restore
 
 @pytest.mark.parametrize("report_arrives", [True, False])
 async def test_battery_command_retries_an_ignored_initial_read_once(hass, monkeypatch, report_arrives):
-    from custom_components.tuya_camera_bridge import lan
+    from custom_components.tuya_camera import lan
 
     clock = [0.0]
     monkeypatch.setattr(lan, "time", SimpleNamespace(monotonic=lambda: clock[0]))

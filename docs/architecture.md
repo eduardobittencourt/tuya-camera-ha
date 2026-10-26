@@ -2,8 +2,10 @@
 
 Starting with 0.4.0b1, all camera protocols execute as Python tasks in the Home
 Assistant integration. No project-specific executable, Go runtime, add-on or
-container is downloaded or supervised. The integration domain remains
-`tuya_camera_bridge` to preserve existing accounts, entities and automations.
+container is downloaded or supervised. Starting with 0.4.0b2, the name is
+Tuya Camera and the integration domain is `tuya_camera`. Upgrading from the
+former `tuya_camera_bridge` domain requires
+the explicit migration/reinstallation described in [installation](installation.md).
 
 ## Account and media ownership
 
