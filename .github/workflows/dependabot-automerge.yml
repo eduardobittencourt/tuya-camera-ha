@@ -30,6 +30,14 @@ jobs:
     outputs:
       checksum_candidates: ${{ steps.manage.outputs.checksum_candidates }}
     steps:
+      - name: Require the dedicated automation credential
+        env:
+          AUTOMATION_TOKEN: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
+        run: |
+          if [ -z "$AUTOMATION_TOKEN" ]; then
+            echo "::error::Configure the DEPENDABOT_AUTOMATION_TOKEN repository secret before running maintenance."
+            exit 1
+          fi
       # Privileged jobs load scripts from the default branch, never a PR.
       - uses: actions/checkout@v4
         with:
@@ -38,6 +46,7 @@ jobs:
       - uses: actions/github-script@v9
         id: manage
         with:
+          github-token: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
           script: |
             const {manage} = require('./scripts/dependency_automation.cjs');
             await manage({github, context, core});
@@ -70,6 +79,7 @@ jobs:
         env:
           CANDIDATE: ${{ toJSON(matrix.candidate) }}
         with:
+          github-token: ${{ secrets.DEPENDABOT_AUTOMATION_TOKEN }}
           script: |
             const fs = require('node:fs');
             const {publish} = require('./scripts/dependency_automation.cjs');

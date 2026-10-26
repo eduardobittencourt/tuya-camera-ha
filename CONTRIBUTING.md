@@ -59,6 +59,16 @@ on the exact current head of a same-repository Dependabot PR, with the expected
 GitHub Actions actor and PR association. This starts tests without waiving any
 required result or approving reviews.
 
+The trusted maintenance and checksum-publication jobs require the Actions secret
+`DEPENDABOT_AUTOMATION_TOKEN`. Use a dedicated fine-grained token restricted to
+this repository, with Actions, Contents, Pull requests and Workflows write access.
+The default `GITHUB_TOKEN` cannot update workflow files during branch refreshes
+and cannot provide unattended approval of its own PR-triggered workflows. Builds
+and ordinary CI never receive the dedicated credential; only scripts checked out
+from `main` use it. Configure the secret before enabling unattended maintenance,
+and rotate it before expiry. Do not reuse a broad personal CLI token without
+explicit maintainer approval.
+
 For PRs changing only Go module files and the binary manifest, an isolated build
 with Go 1.26.8 regenerates checksums in the PR branch's security/cache context,
 without write permissions, secrets or shared build caches. A separate trusted
