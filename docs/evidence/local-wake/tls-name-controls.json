@@ -1,0 +1,160 @@
+{
+  "scope": {
+    "retail_sku": "11188736",
+    "firmware": "1.1.48",
+    "unit_count": 1
+  },
+  "method": "Same experimental issuer CA, root/leaf keys, validity, usages and TLS settings; only CN and DNS SAN vary. Camera trust unchanged. Independent client trusting experimental CA passed expected hostname controls.",
+  "client_hostname_control_expected_and_observed": [
+    true,
+    false,
+    true,
+    false
+  ],
+  "variant_order": [
+    "both_match",
+    "cn_only_match",
+    "san_only_match",
+    "both_wrong"
+  ],
+  "events": [
+    {
+      "event": "direct_tls_probe_started",
+      "utc": "2026-10-27T00:35:13.088263+00:00",
+      "elapsed": 0.202,
+      "wake_path": "normal_HA",
+      "wan_allowed": true,
+      "only_camera_tcp8883_redirected": true
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:20.941276+00:00",
+      "elapsed": 8.055,
+      "certificate_variant": "both_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:20.956633+00:00",
+      "elapsed": 8.07,
+      "certificate_variant": "both_match",
+      "reason": "TLSV1_ALERT_UNKNOWN_CA"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:21.332564+00:00",
+      "elapsed": 8.446,
+      "certificate_variant": "cn_only_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:21.364946+00:00",
+      "elapsed": 8.478,
+      "certificate_variant": "cn_only_match",
+      "reason": "SSLV3_ALERT_BAD_CERTIFICATE"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:24.284318+00:00",
+      "elapsed": 11.398,
+      "certificate_variant": "san_only_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:24.560374+00:00",
+      "elapsed": 11.674,
+      "certificate_variant": "san_only_match",
+      "reason": "TLSV1_ALERT_UNKNOWN_CA"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:25.368792+00:00",
+      "elapsed": 12.482,
+      "certificate_variant": "both_wrong",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:25.478430+00:00",
+      "elapsed": 12.592,
+      "certificate_variant": "both_wrong",
+      "reason": "SSLV3_ALERT_BAD_CERTIFICATE"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:26.990081+00:00",
+      "elapsed": 14.103,
+      "certificate_variant": "both_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:27.021963+00:00",
+      "elapsed": 14.135,
+      "certificate_variant": "both_match",
+      "reason": "TLSV1_ALERT_UNKNOWN_CA"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:30.847956+00:00",
+      "elapsed": 17.961,
+      "certificate_variant": "cn_only_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:30.979629+00:00",
+      "elapsed": 18.093,
+      "certificate_variant": "cn_only_match",
+      "reason": "SSLV3_ALERT_BAD_CERTIFICATE"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:31.898746+00:00",
+      "elapsed": 19.012,
+      "certificate_variant": "san_only_match",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:32.662633+00:00",
+      "elapsed": 19.776,
+      "certificate_variant": "san_only_match",
+      "reason": "TLSV1_ALERT_UNKNOWN_CA"
+    },
+    {
+      "event": "name_certificate_selected",
+      "utc": "2026-10-27T00:35:33.463551+00:00",
+      "elapsed": 20.577,
+      "certificate_variant": "both_wrong",
+      "sni_present": true,
+      "shared_service_name": "m2.tuyaus.com"
+    },
+    {
+      "event": "local_mqtt_tls_rejected",
+      "utc": "2026-10-27T00:35:33.791560+00:00",
+      "elapsed": 20.905,
+      "certificate_variant": "both_wrong",
+      "reason": "SSLV3_ALERT_BAD_CERTIFICATE"
+    },
+    {
+      "event": "name_matrix_completed",
+      "utc": "2026-10-27T00:35:34.091397+00:00",
+      "elapsed": 21.205
+    },
+    {
+      "event": "cleanup_completed",
+      "utc": "2026-10-27T00:35:35.567182+00:00",
+      "elapsed": 22.681
+    }
+  ]
+}
