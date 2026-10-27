@@ -1,0 +1,237 @@
+{
+  "reviewed_on_utc": "2026-10-27",
+  "scope": {
+    "retail_sku": "11188736",
+    "firmware_versions": [
+      "1.1.48"
+    ],
+    "unit_count": 1
+  },
+  "collection": {
+    "method": "Authenticated account read APIs; public schema definitions only, not live device DP values.",
+    "actions": [
+      {
+        "name": "thing.m.device.get",
+        "version": "4.1",
+        "succeeded": true
+      },
+      {
+        "name": "tuya.m.device.ref.info.my.list",
+        "version": "2.0",
+        "succeeded": true
+      }
+    ],
+    "fresh_matches_cached": true,
+    "no_dp_writes": true
+  },
+  "definitions": [
+    {
+      "id": 101,
+      "code": "basic_indicator",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 103,
+      "code": "basic_flip",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 104,
+      "code": "basic_osd",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 108,
+      "code": "basic_nightvision",
+      "mode": "rw",
+      "property": {
+        "type": "enum",
+        "range": [
+          "0",
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "id": 109,
+      "code": "sd_storge",
+      "mode": "ro",
+      "property": {
+        "type": "string",
+        "maxlen": 255
+      }
+    },
+    {
+      "id": 110,
+      "code": "sd_status",
+      "mode": "ro",
+      "property": {
+        "type": "value",
+        "min": 1,
+        "max": 5,
+        "step": 1,
+        "scale": 1
+      }
+    },
+    {
+      "id": 111,
+      "code": "sd_format",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 115,
+      "code": "movement_detect_pic",
+      "mode": "ro",
+      "property": {
+        "type": "raw",
+        "maxlen": 128
+      }
+    },
+    {
+      "id": 117,
+      "code": "sd_format_state",
+      "mode": "ro",
+      "property": {
+        "type": "value",
+        "min": -20000,
+        "max": 20000,
+        "step": 1,
+        "scale": 1
+      }
+    },
+    {
+      "id": 145,
+      "code": "wireless_electricity",
+      "mode": "ro",
+      "property": {
+        "type": "value",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "scale": 1
+      }
+    },
+    {
+      "id": 146,
+      "code": "wireless_powermode",
+      "mode": "ro",
+      "property": {
+        "type": "enum",
+        "range": [
+          "0",
+          "1"
+        ]
+      }
+    },
+    {
+      "id": 147,
+      "code": "wireless_lowpower",
+      "mode": "rw",
+      "property": {
+        "type": "value",
+        "min": 10,
+        "max": 30,
+        "step": 1,
+        "scale": 1
+      }
+    },
+    {
+      "id": 149,
+      "code": "wireless_awake",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 150,
+      "code": "record_switch",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 159,
+      "code": "siren_switch",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 160,
+      "code": "basic_device_volume",
+      "mode": "rw",
+      "property": {
+        "type": "value",
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "scale": 0
+      }
+    },
+    {
+      "id": 170,
+      "code": "humanoid_filter",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 185,
+      "code": "alarm_message",
+      "mode": "ro",
+      "property": {
+        "type": "raw",
+        "maxlen": 128
+      }
+    },
+    {
+      "id": 231,
+      "code": "cus_alarm",
+      "mode": "ro",
+      "property": {
+        "type": "enum",
+        "range": [
+          "0",
+          "1"
+        ]
+      }
+    },
+    {
+      "id": 240,
+      "code": "ipc_pir_switch",
+      "mode": "rw",
+      "property": {
+        "type": "bool"
+      }
+    },
+    {
+      "id": 241,
+      "code": "ipc_pir_sensitivity",
+      "mode": "rw",
+      "property": {
+        "type": "value",
+        "min": 1,
+        "max": 10,
+        "step": 1,
+        "scale": 0
+      }
+    }
+  ]
+}

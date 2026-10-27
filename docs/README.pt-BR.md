@@ -15,7 +15,8 @@ integração. O executável Go foi removido. Não é preciso habilitar versões 
 no HACS; veja a [arquitetura](architecture.md).
 
 [English](../README.md) · [Instalação detalhada](installation.md) ·
-[Compatibilidade](compatibility.md) · [Resolução de problemas](troubleshooting.md)
+[Compatibilidade](compatibility.md) · [Resolução de problemas](troubleshooting.md) ·
+[Investigação 100% LAN](offline-operation.pt-BR.md)
 
 [Validação da estável](validation-0.4.0.md) · [Validação da migração Python](validation-0.4.0b1.md) · [Validação da troca de domínio](validation-0.4.0b2.md)
 

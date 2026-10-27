@@ -42,7 +42,7 @@ synthetic fixtures are not additional verified retail models.
 | Camera settings/telemetry | LAN only; discovered from valid reports during media sessions on the tested battery model |
 | PTZ, two-way audio | Not exposed |
 | MFA / interactive captcha | Not implemented |
-| Offline operation | Not established; Tuya authentication/signaling require internet |
+| Offline operation | Not established; sleeping camera still uses cloud wake. See [evidence and implementation decision](offline-operation.md) |
 
 Other battery/low-power models, OEM-specific app accounts, NVRs, doorbells and
 other audio codecs are not covered by the real-device test. Shared devices and regional account

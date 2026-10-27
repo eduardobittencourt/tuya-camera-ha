@@ -19,7 +19,8 @@ executable has been removed. Beta versions do not need to be enabled in HACS.
 See [architecture](docs/architecture.md).
 
 [Português brasileiro](docs/README.pt-BR.md) · [Installation](docs/installation.md) ·
-[Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md)
+[Compatibility](docs/compatibility.md) · [Troubleshooting](docs/troubleshooting.md) ·
+[Offline investigation](docs/offline-operation.md)
 
 [Stable validation](docs/validation-0.4.0.md) · [Python migration validation](docs/validation-0.4.0b1.md) · [Domain migration validation](docs/validation-0.4.0b2.md)
 
