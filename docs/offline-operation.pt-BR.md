@@ -41,7 +41,10 @@ O [SDK Android](https://developer.tuya.com/en/docs/app-development/doorbell?id=K
 apresenta esse DP como estado de wake. O
 [guia de firmware 4.x](https://developer.tuya.com/en/docs/iot-device-dev/sdk?id=K95019g5w3eiq)
 também menciona controle de repouso, mas suas descrições de polaridade são
-inconsistentes e a sequência inclui comunicação com servidor. Uma função interna
+inconsistentes e a sequência inclui comunicação com servidor. A referência é a
+seção **Doorbell feature → Devices enter sleep mode**, revisada pela Tuya em
+26/06/2024; o parâmetro `id=K95019g5w3eiq` identifica o documento na URL.
+Uma função interna
 do firmware não é automaticamente um comando LAN disponível ao usuário.
 
 As antigas tentativas UDP não substituem um teste autenticado por TCP enquanto
@@ -78,11 +81,13 @@ comando normal, confirmar significado/polaridade e só então comparar uma escri
 LAN autenticada, com recuperação disponível.
 
 Antes de anunciar operação diária offline, precisamos bloquear IPv4 e IPv6 da
-câmera e do cliente, verificar o bloqueio também para conexões existentes,
-controlar DNS e caminhos alternativos e repetir ciclos com mídia nova,
-telemetria e mudanças de ajuste confirmadas. Repouso longo, reinício do HA,
-ciclo de energia da câmera e persistência das credenciais também precisam
-passar. Eventos e autonomia de bateria exigem medições próprias.
+câmera e do cliente, verificar o bloqueio também para conexões existentes usando
+contadores ou captura de tráfego no upstream, controlar DNS e caminhos
+alternativos e distinguir tráfego local dos fallbacks de nuvem/TURN. Precisamos
+repetir ciclos com mídia nova, telemetria e mudanças de ajuste confirmadas.
+Repouso longo, reinício do HA, ciclo de energia da câmera e persistência e
+recuperação das credenciais também precisam passar. Eventos e autonomia de
+bateria exigem medições próprias.
 
 Os ensaios atuais tiveram preparação online; o isolamento posterior foi IPv4,
 com DNS LAN disponível. Porta fechada e autenticação low-power são indicadores

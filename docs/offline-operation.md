@@ -69,6 +69,9 @@ uses DP 149 as awake status. Its
 [4.x firmware SDK guide](https://developer.tuya.com/en/docs/iot-device-dev/sdk?id=K95019g5w3eiq)
 also describes sleep control and a server-notification sequence before sleep.
 That guide's boolean descriptions conflict with its later awake report example.
+The relevant section is **Doorbell feature → Devices enter sleep mode**, updated
+by Tuya on 2024-06-26; keep the `id=K95019g5w3eiq` query parameter in the URL to
+identify the document.
 Neither the name nor `rw` establishes which LAN write, if any, bypasses the
 external transition on firmware 1.1.48. Earlier UDP DP149 probes are not a test
 of an authenticated TCP write while the camera is awake. **No DP writes were

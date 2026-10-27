@@ -338,7 +338,7 @@ This corrected control completed two wakes:
 
 - Local authentication at **23:05:43.515 UTC**, followed by three heartbeat echoes
   and a six-second closed-port baseline. Wake at **23:07:19.746 UTC** reopened
-  TCP 6668 in **1.282 seconds**; write-side shutdown followed after 2.501 seconds.
+  TCP 6668 in **1.282 seconds**; write-side shutdown followed 2.501 seconds later.
 - A new authentication arrived at **23:08:15.774 UTC**. After another 90-second
   observation, three more heartbeat echoes and a closed-port baseline, wake at
   **23:09:52.723 UTC** reopened TCP 6668 in **1.882 seconds**. A new LAN-only
@@ -596,8 +596,8 @@ are redistributed here. Section names help locate relevant text if pages move.
 | Source / section | Relevant fact | Limit |
 | --- | --- | --- |
 | [Tuya Keep-Alive and Wake-Up in Low Power](https://developer.tuya.com/en/docs/iot-device-dev/tuyaos-package-ipc-device?id=Kcn1qc5he02rw), low-power protocols | Authenticated keepalive/wake protocol and separate low-power component | Does not supply a verified homeowner setting to choose a local endpoint on this camera |
-| [Android Low Power Camera](https://developer.tuya.com/en/docs/app-development/doorbell?id=Ka6nxw2gncv8t), wake | `wirelessWake` API and DP149 awake status | An API name does not establish LAN transport |
-| [iOS Low Power Camera](https://developer.tuya.com/en/docs/app-development/low-power-doorbell?id=Kad3pl13guhil), wake and battery management | Wake-request success differs from camera awake; DP147 is low-battery threshold | Does not prove an offline transition on this firmware |
+| [Android Low-Power Camera](https://developer.tuya.com/en/docs/app-development/doorbell?id=Ka6nxw2gncv8t), wake | `wirelessWake` API and DP149 awake status | An API name does not establish LAN transport |
+| [iOS Low-Power Camera](https://developer.tuya.com/en/docs/app-development/low-power-doorbell?id=Kad3pl13guhil), wake and battery management | Wake-request success differs from camera awake; DP147 is low-battery threshold | Does not prove an offline transition on this firmware |
 | [4.x SDK Development Guide](https://developer.tuya.com/en/docs/iot-device-dev/sdk?id=K95019g5w3eiq), Doorbell feature | Sleep sequence uses `tuya_ipc_book_wakeup_topic`, MQTT socket and heartbeat preparation | Firmware developer API, not evidence of a user-accessible LAN setter; DP149 polarity is inconsistent in the page |
 | [5.x SDK guide, Chinese](https://developer.tuya.com/cn/docs/iot-device-dev/IPC_SDK?id=Kaqe10hg0htn5) | Additional public firmware-development reference reviewed | No model-specific endpoint/trust control identified; English page fetch timed out, and this does not identify firmware 1.1.48's SDK |
 | [Official Tuya IoT Core SDK](https://github.com/tuya/tuya-iot-core-sdk), Sample application | MQTT initialization supplies `host`, `port` and `cacert` in application code | Capability of a developer-owned program, not a supported configuration interface on this retail camera |
