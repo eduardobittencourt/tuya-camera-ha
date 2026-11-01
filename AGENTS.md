@@ -18,6 +18,7 @@ Use English for public code comments, documentation and review feedback.
   cancellation, unload and removal.
 - Keep credentials, session IDs, encryption codes, local keys, captured MQTT
   payloads and generated account configurations out of logs and contributions.
+  Never log raw protocol output or credential-bearing errors.
   Public app-profile constants in `vendor/tuya_mobile/profiles.py` identify shared
   mobile builds and are not user credentials. Preserve upstream license notices.
 - Preserve account configuration and entity unique IDs across upgrades. Add
