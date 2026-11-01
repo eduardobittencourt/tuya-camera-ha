@@ -43,7 +43,12 @@ jobs:
       - run: pip install '.[test]'
       - run: ruff check custom_components tests scripts
       - run: python scripts/check_repository.py
-      - run: node --test tests/test_release_gate.cjs
+      - name: Test release gate with JavaScript coverage
+        run: >-
+          node --test --experimental-test-coverage
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=lcov --test-reporter-destination=coverage-js.lcov
+          tests/test_release_gate.cjs
       - run: coverage run -m pytest -m 'not media'
         env:
           COVERAGE_FILE: .coverage.python
@@ -52,7 +57,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-python
-          path: .coverage.python
+          path: |
+            .coverage.python
+            coverage-js.lcov
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7

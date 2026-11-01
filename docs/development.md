@@ -11,7 +11,8 @@ uv pip install '.[test]'
 .venv/bin/pytest -m 'not media'
 .venv/bin/python scripts/package_release.py
 .venv/bin/python scripts/check_repository.py --archive dist/tuya_camera.zip
-node --test tests/test_release_gate.cjs
+node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout \
+  --test-reporter=lcov --test-reporter-destination=coverage-js.lcov tests/test_release_gate.cjs
 ```
 
 ## Protocol and media validation

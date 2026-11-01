@@ -11,6 +11,8 @@ The Sonar job downloads coverage from the same run, combines it, exports
 `sonar.projectVersion`; never substitute a build number or commit SHA.
 Intelbras and Motorola publish the current-HA suite; minimum-HA tests remain
 mandatory compatibility checks. Tuya combines Python and synthetic-media suites.
+The Node test runner also exports LCOV for the JavaScript release gate; its
+report travels with the Python artifact and is imported separately by Sonar.
 
 Keep the new-code definition at **Previous version**, use the same Python
 quality profile and **Sonar way** quality gate in all three HA repositories.
