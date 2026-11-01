@@ -45,3 +45,7 @@ Before publishing, run a clean dependency resolution for the declared test
 extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
 hassfest. Synthetic peers cannot certify another retail camera. Record sanitized
 real-camera results and limits; never retain private media or protocol payloads.
+
+## SonarQube Cloud
+
+See [SonarQube Cloud and coverage](sonarqube.md) for CI analysis, coverage artifacts and external-contribution limits.

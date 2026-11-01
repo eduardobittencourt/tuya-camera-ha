@@ -11,3 +11,11 @@ dist/
 build/
 *.egg-info/
 .tuya-data/
+
+.coverage.*
+
+coverage.xml
+
+coverage-data/
+
+.coverage
