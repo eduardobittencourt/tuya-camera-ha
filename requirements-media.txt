@@ -1,4 +1,10 @@
 # CI-only FFmpeg 7.0.2 static binary, distributed in the Linux x86_64 wheel.
 # Not a Home Assistant integration dependency or part of the release ZIP.
-imageio-ffmpeg==0.6.0 \
-    --hash=sha256:c7e46fcec401dd990405049d2e2f475e2b397779df2519b544b8aab515195282
+imageio-ffmpeg==0.7.0 \
+    --hash=sha256:4e1f36bef7bedd4bc5dc25f60a8345d88f57133fa1e754f09b411ac61b854408 \
+    --hash=sha256:588a23c6a1c55a7cb51febfe97d3ef8dd5e7fa0ef7e14c7da8828e2886bdd3a3 \
+    --hash=sha256:5cb5c37d3c19aa8e7cd95b9f4833e6a3d9fd33e4b1d126a42995b14aef9fef02 \
+    --hash=sha256:7a22b45f60321d4172bdf2bc61f716bce4c81b85727bd59c7c7e371055a6a440 \
+    --hash=sha256:eec1f8b9bd873a2f179c994c653d5970ad560e245faf1a777e971933228b829a \
+    --hash=sha256:f439dc720813fb7c10aba8c5f7681d4ca4d2aeae4f35e8347d2851b81b7b0a92 \
+    --hash=sha256:fafa399433b571e8963471487cd7a7bb3ee7b532af42e6342145add6379f479b
