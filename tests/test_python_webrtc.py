@@ -127,3 +127,70 @@ def test_tuya_ice_normalization_preserves_token_and_turn_credentials():
     assert servers[1].credential == "synthetic"
     assert len(servers) == 2
     assert config["p2pConfig"]["ices"][0]["urls"].endswith("?transport=udp")
+
+
+@pytest.mark.parametrize("channel", [False, True])
+async def test_cloud_final_reader_cancellation_retains_peer_close_for_reconnect(channel):
+    """A cancelled final lease must not cancel aiortc's one-shot close operation."""
+    from unittest.mock import patch
+
+    from custom_components.tuya_camera.media.rtsp import MediaSource
+
+    peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))
+    if channel:
+        peer.createDataChannel("synthetic")
+        transport = peer.sctp
+    else:
+        transport = peer.addTransceiver("video")
+    stopping, proceed, interrupted = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    original_stop = transport.stop
+
+    async def stop():
+        """Pause inside the real peer's close after its completion future exists."""
+        stopping.set()
+        try:
+            await proceed.wait()
+        except asyncio.CancelledError:
+            interrupted.set()
+            raise
+        await original_stop()
+
+    session = CloudSession(None, {}, lambda *_: None)
+    session.peer = peer
+    replacement = AsyncMock()
+    replacement.failed = asyncio.Event()
+    replacement.hevc, replacement.audio_codec = False, "PCMU/8000/1"
+    factory = AsyncMock(side_effect=[session, replacement])
+    source = MediaSource(factory, lambda: None)
+    reader = await source.acquire()
+    release = None
+    try:
+        with patch.object(transport, "stop", side_effect=stop):
+            release = asyncio.create_task(source.release(reader))
+            await asyncio.wait_for(stopping.wait(), 2)
+            release.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await release
+            assert not interrupted.is_set()
+            assert source.session is session
+            assert not source.consumers
+            proceed.set()
+            new_reader = await asyncio.wait_for(source.acquire(), 2)
+            assert source.session is replacement
+            assert source.consumers == {new_reader}
+            assert session.peer is None
+            assert session.failed.is_set()
+            assert peer.connectionState == "closed"
+            assert factory.await_count == 2
+    finally:
+        proceed.set()
+        if release is not None:
+            await asyncio.gather(release, return_exceptions=True)
+        if interrupted.is_set():
+            # Failure-path cleanup when testing the unfixed implementation.
+            await original_stop()
+            dtls = transport.transport if channel else transport.receiver.transport
+            await dtls.stop()
+            await dtls.transport.stop()
+            source.session = None
+        await source.stop()

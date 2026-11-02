@@ -70,3 +70,18 @@ HA Core version remained 2026.11.0b2. Images/audio were processed in memory only
 The observed HA libraries were aiortc 1.15.0, PyAV 19.0.0, aioice 0.10.2 and
 TinyTuya 1.20.0. These physical results complement the locked CI environment;
 they do not certify other cameras, every cloud/WebRTC path or all HA versions.
+
+## Cloud peer cancellation
+
+The pinned aiortc peer's `close()` creates a one-shot completion future before
+stopping RTP/SCTP and ICE transports. Cancelling that close midway leaves its
+future incomplete, so calling it again cannot resume cleanup. `CloudSession`
+now owns one peer-close task and awaits it through `asyncio.shield()`. Caller
+cancellation still propagates; the session retains the task and peer until a
+subsequent cleanup wait completes, before `MediaSource` replaces the session.
+
+Two regressions pause the real aiortc close inside RTP and datachannel cleanup,
+cancel the final reader's release, and verify transport cleanup is not cancelled.
+They then unblock cleanup and acquire a replacement session within a deadline.
+Both failed before this fix. This cloud cancellation path is tested synthetically;
+the physical battery-camera report above predates this additional cloud change.

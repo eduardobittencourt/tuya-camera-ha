@@ -176,6 +176,7 @@ class CloudSession:
         self.phase = "config"
         self.failure = None
         self.peer = None
+        self._peer_close_task: asyncio.Task | None = None
         self.broker = None
         self.tasks: set[asyncio.Task] = set()
         self.session_id = secrets.token_hex(16)
@@ -364,6 +365,7 @@ class CloudSession:
                 return
 
     async def close(self):
+        """Retain the peer close operation when a caller stops waiting for cleanup."""
         tasks = list(self.tasks)
         for task in tasks:
             task.cancel()
@@ -374,6 +376,10 @@ class CloudSession:
             await self.broker.close()
             self.broker = None
         if self.peer:
-            await self.peer.close()
+            if self._peer_close_task is None:
+                self._peer_close_task = asyncio.create_task(self.peer.close())
+            # aiortc close is one-shot: cancellation strands its completion future.
+            await asyncio.shield(self._peer_close_task)
             self.peer = None
+            self._peer_close_task = None
         self.failed.set()
