@@ -23,9 +23,11 @@ See [SECURITY.md](../../SECURITY.md) for vulnerability reporting.
 
 `scripts/check_repository.py --archive dist/tuya_camera.zip` accepts only the
 repository's fixed archive. It verifies member names, sizes and bytes against
-the component plus LICENSE/NOTICE, checks SHA256SUMS and rejects escaping paths
-and symlinks. ZIP input size and reads are bounded. It does not extract or run
-archive contents. The local checkout and filesystem remain trusted inputs.
+the component plus LICENSE/NOTICE and checks SHA256SUMS. It rejects escaping
+member paths and filesystem symlinks in the release directory, archive and
+adjacent checksum paths. ZIP member symlink metadata is not inspected. ZIP input
+size and reads are bounded. The checker does not extract or run archive contents.
+The local checkout and filesystem remain trusted inputs.
 
 ## Synthetic media probe
 
