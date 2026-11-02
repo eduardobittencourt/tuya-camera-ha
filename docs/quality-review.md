@@ -85,5 +85,30 @@ controls with restoration, reload and final standby/process cleanup. Record
 initialization failures and retries explicitly. Never retain private frames,
 audio, signed stream URLs or protocol payloads in evidence.
 
-Physical-camera verification of this candidate is pending; synthetic results
-must not be represented as a completed Home Assistant hardware test.
+## Physical-camera verification
+
+The announced window on 2026-11-01 ran from 23:02:28 to 23:20:31 BRT on
+Home Assistant 2026.10.4. Runtime commit `34c2e7b` passed with the configured
+physical camera; these results do not certify other camera models.
+
+- All 44 installed candidate files matched the package. Account configuration
+  and all 19 entity bindings remained unchanged, with 17 entities enabled.
+- The first candidate snapshot succeeded in 6.1 seconds. HLS playback decoded
+  947 H.264 video frames and 959 AAC audio frames over 61.7 seconds.
+- PIR, night vision and PIR sensitivity changes were confirmed and restored
+  during playback. Reloading the integration preserved availability, and a
+  fresh snapshot succeeded in 2.8 seconds. The camera returned to standby with
+  zero media processes.
+- Official 0.4.0 code was restored afterward, with all package hashes and
+  account/entity fingerprints verified. Final state was HA running, integration
+  loaded, camera in standby and all three startup automations restored.
+  Private images and audio were processed in memory and were not retained.
+
+The first attempt did not reach media tests: HA shutdown stalled with an
+`ONVIFDevice.async_stop` task pending and required a container restart. The
+successful repeat used a bounded container restart. During intentional entry
+reload, the old stream worker logged an I/O error followed by connection
+refusal; post-reload capture and cleanup passed. After restoring official
+0.4.0, initial snapshot attempts failed until the entry was reloaded; capture
+then succeeded in 6.2 seconds. These recovery events are part of the result,
+not an assertion that every startup or shutdown was error-free.
