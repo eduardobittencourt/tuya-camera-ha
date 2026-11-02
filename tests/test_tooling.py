@@ -4,10 +4,11 @@ import hashlib
 import json
 import tomllib
 import zipfile
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from aiohttp import web
+from aioice import Candidate, stun
 from packaging.requirements import Requirement
 
 from scripts import check_repository, package_release, webrtc_probe
@@ -32,11 +33,15 @@ def test_locked_dependencies_match_declared_test_extra():
             assert requirement.specifier.contains(version)
 
 
-def test_public_repository_and_generated_package(tmp_path):
+def test_public_repository_and_generated_package(tmp_path, monkeypatch):
     manifest = check_repository.check_repository()
-    with patch("sys.argv", ["package_release", "--output", str(tmp_path)]):
+    output = tmp_path / "dist"
+    with patch("sys.argv", ["package_release", "--output", str(output)]):
         package_release.main()
-    check_repository.check_archive(tmp_path / "tuya_camera.zip", manifest)
+    for name in ("LICENSE", "NOTICE"):
+        (tmp_path / name).write_bytes((check_repository.ROOT / name).read_bytes())
+    monkeypatch.setattr(check_repository, "ROOT", tmp_path)
+    check_repository.check_archive(output / "tuya_camera.zip", manifest)
 
 
 @pytest.mark.parametrize("port", [
@@ -121,6 +126,10 @@ async def test_probe_reads_fragmented_answer_to_eof(aiohttp_server, socket_enabl
     sdp = synthetic_answer("127.0.0.1")
 
     async def answer(request):
+        offer = webrtc_probe.SessionDescription.parse(await request.text())
+        candidates = [c for media in offer.media for c in media.ice_candidates]
+        assert candidates
+        assert all(c.ip == "127.0.0.1" for c in candidates)
         response = web.StreamResponse()
         await response.prepare(request)
         await response.write(sdp[:20].encode())
@@ -138,12 +147,61 @@ async def test_probe_reads_fragmented_answer_to_eof(aiohttp_server, socket_enabl
     remote.assert_awaited_once_with(webrtc_probe.RTCSessionDescription(sdp=sdp, type="answer"))
 
 
+@pytest.mark.parametrize("host", ["127.0.0.1", "192.0.2.10", "169.254.169.254", "::1"])
+async def test_probe_restricts_authenticated_peer_reflexive_learning(host):
+    """Offer credentials do not authorize external STUN replies or triggered checks."""
+    connection = webrtc_probe.LoopbackConnection(ice_controlling=False)
+    connection.remote_username = "synthetic-peer"
+    connection._early_checks_done = True
+    protocol = Mock()
+    protocol.local_candidate = Candidate("local", 1, "udp", 1, "127.0.0.1", 12345, "host")
+    message = stun.Message(stun.Method.BINDING, stun.Class.REQUEST, attributes={
+        "USERNAME": f"{connection.local_username}:synthetic-peer", "PRIORITY": 1,
+        "ICE-CONTROLLING": 1,
+    })
+    message.add_message_integrity(connection.local_password.encode())
+    raw = bytes(message)
+    # Prove this is authenticated input, rather than a packet rejected as corrupt.
+    stun.parse_message(raw, integrity_key=connection.local_password.encode())
+    try:
+        with patch.object(connection, "check_start_task") as check:
+            connection.request_received(message, (host, 23456), protocol, raw)
+        if host == "127.0.0.1":
+            protocol.send_stun.assert_called_once()
+            check.assert_called_once()
+            assert len(connection.remote_candidates) == 1
+            assert connection.remote_candidates[0].host == host
+            assert connection.remote_candidates[0].type == "prflx"
+        else:
+            protocol.send_stun.assert_not_called()
+            check.assert_not_called()
+            assert not connection.remote_candidates
+            assert not connection._early_checks
+    finally:
+        await connection.close()
+
+
+def test_probe_restores_ice_factory_if_transceiver_creation_fails():
+    """The private factory hook is confined to synchronous test-peer construction."""
+    original = webrtc_probe.rtcicetransport.Connection
+    peer = Mock()
+    peer.addTransceiver.side_effect = RuntimeError("synthetic failure")
+    with pytest.raises(RuntimeError, match="synthetic failure"):
+        webrtc_probe.add_receivers(peer)
+    assert webrtc_probe.rtcicetransport.Connection is original
+
+
 @pytest.mark.parametrize("member", ["../outside", "/absolute", "directory/../../outside", "directory\\outside"])
 def test_archive_rejects_unsafe_members_without_extracting_files(tmp_path, monkeypatch, member):
     component = tmp_path / "component"
     component.mkdir()
     monkeypatch.setattr(check_repository, "COMPONENT", component)
-    archive = tmp_path / "candidate.zip"
+    for name in ("LICENSE", "NOTICE"):
+        (tmp_path / name).write_text(name)
+    monkeypatch.setattr(check_repository, "ROOT", tmp_path)
+    output = tmp_path / "dist"
+    output.mkdir()
+    archive = output / "tuya_camera.zip"
     with zipfile.ZipFile(archive, "w") as candidate:
         candidate.writestr(member, "untrusted")
     with pytest.raises(SystemExit, match="Unsafe archive path"):
@@ -151,8 +209,9 @@ def test_archive_rejects_unsafe_members_without_extracting_files(tmp_path, monke
     assert not (tmp_path / "outside").exists()
 
 
-def test_archive_verifies_exact_files_and_checksum(tmp_path, monkeypatch):
-    """Reject changed bytes even when filenames and uncompressed sizes match."""
+@pytest.fixture
+def reviewed_archive(tmp_path, monkeypatch):
+    """Create a small reviewed tree and its release ZIP inside the allowed directory."""
     component = tmp_path / "component"
     component.mkdir()
     manifest = {"version": "0.4.0"}
@@ -161,12 +220,21 @@ def test_archive_verifies_exact_files_and_checksum(tmp_path, monkeypatch):
         (tmp_path / name).write_text(name)
     monkeypatch.setattr(check_repository, "ROOT", tmp_path)
     monkeypatch.setattr(check_repository, "COMPONENT", component)
-    archive = tmp_path / "candidate.zip"
+    output = tmp_path / "dist"
+    output.mkdir()
+    archive = output / "tuya_camera.zip"
     with zipfile.ZipFile(archive, "w") as candidate:
         for path in (component / "manifest.json", tmp_path / "LICENSE", tmp_path / "NOTICE"):
             candidate.write(path, path.name)
-    checksum = tmp_path / "SHA256SUMS"
+    checksum = output / "SHA256SUMS"
     checksum.write_text(f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n")
+    return archive, manifest, component
+
+
+def test_archive_verifies_exact_files_and_checksum(reviewed_archive):
+    """Reject changed bytes even when filenames and uncompressed sizes match."""
+    archive, manifest, component = reviewed_archive
+    checksum = archive.parent / "SHA256SUMS"
     check_repository.check_archive(archive, manifest)
     checksum.write_text("incorrect\n")
     with pytest.raises(SystemExit, match="checksum differs"):
@@ -185,7 +253,9 @@ def test_archive_rejects_compressed_bomb_before_reading_members(tmp_path, monkey
         (tmp_path / name).write_text(name)
     monkeypatch.setattr(check_repository, "ROOT", tmp_path)
     monkeypatch.setattr(check_repository, "COMPONENT", component)
-    archive = tmp_path / "candidate.zip"
+    output = tmp_path / "dist"
+    output.mkdir()
+    archive = output / "tuya_camera.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as candidate:
         candidate.writestr("manifest.json", b"x" * 1_000_000)
         for name in ("LICENSE", "NOTICE"):
@@ -200,7 +270,60 @@ def test_archive_rejects_oversized_container_before_zip_parsing(tmp_path, monkey
     component = tmp_path / "component"
     component.mkdir()
     monkeypatch.setattr(check_repository, "COMPONENT", component)
-    archive = tmp_path / "candidate.zip"
+    for name in ("LICENSE", "NOTICE"):
+        (tmp_path / name).write_text(name)
+    monkeypatch.setattr(check_repository, "ROOT", tmp_path)
+    output = tmp_path / "dist"
+    output.mkdir()
+    archive = output / "tuya_camera.zip"
     archive.write_bytes(b"x" * 2_000_000)
     with pytest.raises(SystemExit, match="release size limit"):
         check_repository.check_archive(archive, {})
+
+
+@pytest.mark.parametrize("kind", ["outside", "archive_symlink", "directory_symlink"])
+def test_archive_rejects_paths_outside_release_directory(tmp_path, monkeypatch, kind):
+    """CLI paths and symlinks cannot select an input outside the release artifact."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside.zip"
+    outside.write_bytes(b"untrusted input")
+    monkeypatch.setattr(check_repository, "ROOT", root)
+    output = root / "dist"
+    if kind == "directory_symlink":
+        output.symlink_to(tmp_path, target_is_directory=True)
+        archive = output / "tuya_camera.zip"
+    else:
+        output.mkdir()
+        if kind == "archive_symlink":
+            archive = output / "tuya_camera.zip"
+            archive.symlink_to(outside)
+        else:
+            archive = outside
+    with pytest.raises(SystemExit, match=r"symlink|repository's dist"):
+        check_repository.check_archive(archive, {})
+    assert outside.read_bytes() == b"untrusted input"
+
+
+def test_archive_rejects_checksum_symlink_outside_release_directory(reviewed_archive, tmp_path):
+    """The adjacent checksum cannot redirect reads to another local file."""
+    archive, manifest, _ = reviewed_archive
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"untrusted checksum")
+    checksum = archive.parent / "SHA256SUMS"
+    checksum.unlink()
+    checksum.symlink_to(outside)
+    with pytest.raises(SystemExit, match="checksum must not be a symlink"):
+        check_repository.check_archive(archive, manifest)
+    assert outside.read_bytes() == b"untrusted checksum"
+
+
+@pytest.mark.parametrize("name", ["tuya_camera.zip", "SHA256SUMS"])
+def test_archive_inputs_must_be_regular_files(reviewed_archive, name):
+    """Reject directories at either input path instead of treating them as files."""
+    archive, manifest, _ = reviewed_archive
+    target = archive.parent / name
+    target.unlink()
+    target.mkdir()
+    with pytest.raises(SystemExit, match="regular file"):
+        check_repository.check_archive(archive, manifest)

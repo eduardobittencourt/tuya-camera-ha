@@ -5,12 +5,16 @@ analysis of commit `b34f0e9`. Findings require analysis of their input sources,
 effects and compatibility constraints. No issue state, query exclusion or
 security-rule suppression is changed by this review.
 
-## Operator-selected release archive
+## Fixed release archive
 
-`scripts/check_repository.py --archive PATH` intentionally accepts a local ZIP
-selected by the operator. CI and release workflows select `dist/tuya_camera.zip`.
-The checker does not extract members, execute archive code or print file data.
-The CLI path selects an input file; it is not an archive member extraction path.
+`scripts/check_repository.py --archive dist/tuya_camera.zip` accepts only the
+repository's fixed release artifact. The caller's resolved path must match that
+artifact; file operations use the fixed repository path. Input aliases resolving
+elsewhere and symlinks in the release directory, artifact or adjacent checksum
+cannot select a file outside that directory. The repository and its local
+filesystem are trusted; this does not isolate concurrent processes that can
+modify the checkout itself. The checker does not extract members, execute
+archive code or print file data.
 
 Member names must exactly match the reviewed component files plus LICENSE and
 NOTICE. Absolute paths, traversal components and backslashes are rejected.
@@ -31,11 +35,16 @@ These limits accommodate the repository's generated ZIPs and ordinary stored
 or deflated archives without supporting arbitrary ZIP comments or extra fields.
 Regression tests cover generated packages, malicious names, a compressed member
 with one million uncompressed bytes, oversized input, content and checksum
-mismatches. Choosing a ZIP outside the repository remains supported and tested.
+mismatches. Additional tests reject outside paths and escaping directory,
+archive and checksum symlinks. The checker requires `dist/tuya_camera.zip` even
+if `package_release.py --output` was used to generate an archive elsewhere;
+generate the repository's default artifact before invoking this checker.
 
-The path-traversal finding needs contextual review against this read-only
-interface. The resource limits are additional hardening, not evidence that the
-original checker extracted files or disclosed arbitrary input contents.
+The original path-traversal finding involved caller-selected input paths in a
+read-only interface. Confining selection to the release artifact narrows that
+interface for automated callers too. Neither that change nor the resource
+limits imply that the original checker extracted members or disclosed arbitrary
+file contents. CI and release workflow arguments already use the fixed artifact.
 
 ## Synthetic WebRTC probe
 
@@ -52,10 +61,23 @@ related addresses other than `127.0.0.1`, including mDNS names, LAN addresses,
 link-local addresses and IPv6. The peer has no configured STUN/TURN servers.
 This closes the separate candidate-address boundary even when HTTP uses loopback.
 
+SDP filtering alone does not constrain peer-reflexive candidates learned from
+authenticated STUN requests. The probe's `LoopbackConnection` binds its UDP
+sockets only to `127.0.0.1` and drops other STUN source addresses before aioice
+can reply, learn a candidate or schedule a triggered check. The pinned aiortc
+gatherer factory is substituted only during synchronous transceiver creation,
+then restored before any coroutine runs. This private test-tool hook must be
+revalidated with the real synthetic media tests on dependency updates; it does
+not patch the integration or the raw RTP adapter.
+
 Tests reject invalid ports before peer creation, verify that redirects are not
 followed, and reject external ICE targets before `setRemoteDescription` can
 start connectivity checks. The real synthetic H.264/H.265 media tests exercise
 the port-only CLI and receive video and audio through go2rtc.
+Authenticated-STUN regressions verify both rejection of external sources and
+successful peer-reflexive learning on loopback. Offer inspection checks that the
+actual gathered candidates are local, and an error-path test verifies factory
+restoration if transceiver creation fails.
 
 ## Protocol hashes
 

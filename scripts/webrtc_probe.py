@@ -4,12 +4,37 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from unittest.mock import patch
 
 import aiohttp
-from aiortc import RTCConfiguration, RTCPeerConnection, RTCRtpReceiver, RTCSessionDescription
+from aioice import Connection
+from aiortc import RTCConfiguration, RTCPeerConnection, RTCRtpReceiver, RTCSessionDescription, rtcicetransport
 from aiortc.sdp import SessionDescription
 
 MAX_ANSWER_SIZE = 256 * 1024
+
+
+class LoopbackConnection(Connection):
+    """Bind only loopback and reject external STUN before peer-reflexive learning."""
+
+    async def get_component_candidates(self, component, addresses, timeout=5):
+        """Ignore interface enumeration for this local synthetic test process."""
+        return await super().get_component_candidates(component, ["127.0.0.1"], timeout)
+
+    def request_received(self, message, addr, protocol, raw_data):
+        """Drop external sources before authentication, replies or learned checks."""
+        if addr[0] == "127.0.0.1":
+            super().request_received(message, addr, protocol, raw_data)
+
+
+def add_receivers(peer):
+    """Create the pinned aiortc gatherers with the probe's loopback-only factory."""
+    # This synchronous scope restores the factory before any coroutine can run.
+    # The resulting connections retain their guard throughout peer negotiation.
+    with patch.object(rtcicetransport, "Connection", LoopbackConnection):
+        for kind, codec in (("video", "video/H264"), ("audio", "audio/opus")):
+            transceiver = peer.addTransceiver(kind, direction="recvonly")
+            transceiver.setCodecPreferences([c for c in RTCRtpReceiver.getCapabilities(kind).codecs if c.mimeType == codec])
 
 
 def loopback_answer(sdp: str) -> RTCSessionDescription:
@@ -41,9 +66,7 @@ async def run(port: int):
 
     peer.on("track", lambda track: tasks.append(asyncio.create_task(receive(track))))
     try:
-        for kind, codec in (("video", "video/H264"), ("audio", "audio/opus")):
-            transceiver = peer.addTransceiver(kind, direction="recvonly")
-            transceiver.setCodecPreferences([c for c in RTCRtpReceiver.getCapabilities(kind).codecs if c.mimeType == codec])
+        add_receivers(peer)
         await peer.setLocalDescription(await peer.createOffer())
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=35), trust_env=False) as session, session.post(
             endpoint, data=peer.localDescription.sdp, headers={"Content-Type": "application/sdp"},

@@ -82,7 +82,11 @@ def check_repository() -> dict:
 
 
 def check_archive(path: Path, manifest: dict) -> None:
-    """Inspect an operator-selected ZIP without extracting or trusting its sizes."""
+    """Inspect the repository's release ZIP without trusting caller paths or sizes."""
+    release_directory = ROOT.resolve() / "dist"
+    require(release_directory.resolve() == release_directory, "Release directory must not be a symlink")
+    archive_path = release_directory / "tuya_camera.zip"
+    require(path.resolve() == archive_path, "Archive must be the repository's dist/tuya_camera.zip")
     expected = {
         p.relative_to(COMPONENT).as_posix(): p
         for p in COMPONENT.rglob("*")
@@ -92,9 +96,9 @@ def check_archive(path: Path, manifest: dict) -> None:
     contents = {name: source.read_bytes() for name, source in expected.items()}
     # Release ZIPs need only file data and bounded central-directory metadata.
     maximum_size = sum(map(len, contents.values())) + 65536 + 2048 * len(contents)
-    require(path.is_file(), "Archive must be a regular file")
-    require(path.stat().st_size <= maximum_size, "Archive exceeds the release size limit")
-    with zipfile.ZipFile(path) as archive:
+    require(archive_path.is_file(), "Archive must be a regular file")
+    require(archive_path.stat().st_size <= maximum_size, "Archive exceeds the release size limit")
+    with zipfile.ZipFile(archive_path) as archive:
         names = archive.namelist()
         require(len(names) == len(set(names)), "Archive has duplicate entries")
         for name in names:
@@ -107,10 +111,11 @@ def check_archive(path: Path, manifest: dict) -> None:
             with archive.open(name) as member:
                 require(member.read(len(content) + 1) == content, f"Archive content differs: {name}")
         require(json.loads(contents[MANIFEST_NAME]) == manifest, "Archive manifest differs")
-    with path.open("rb") as stream:
+    with archive_path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
-    sums = f"{digest}  {path.name}\n"
-    checksum = path.parent / "SHA256SUMS"
+    sums = f"{digest}  {archive_path.name}\n"
+    checksum = release_directory / "SHA256SUMS"
+    require(checksum.resolve() == checksum, "Published archive checksum must not be a symlink")
     require(checksum.is_file(), "Published archive checksum must be a regular file")
     expected_sum = sums.encode("utf-8")
     with checksum.open("rb") as stream:
@@ -119,7 +124,7 @@ def check_archive(path: Path, manifest: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--archive", type=Path)
+    parser.add_argument("--archive", type=Path, help="Validate dist/tuya_camera.zip in this repository")
     args = parser.parse_args()
     manifest = check_repository()
     if args.archive:

@@ -73,6 +73,10 @@ The synthetic WebRTC probe takes the go2rtc API **port**, not a URL:
 answer's ICE candidates before giving them to aiortc. The test harness provides
 the port of its own synthetic server. See [security boundaries](security-boundaries.md)
 for the archive limits, probe restrictions and protocol-hash review.
+The release checker accepts only this repository's `dist/tuya_camera.zip` and
+rejects symlinks escaping the release directory. Generate the default archive
+before checking it; a custom `package_release.py --output` directory is not an
+alternative input directory for the checker.
 
 Before publishing, run a clean dependency resolution for the declared test
 extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
