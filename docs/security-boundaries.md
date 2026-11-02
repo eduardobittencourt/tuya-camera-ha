@@ -79,6 +79,14 @@ successful peer-reflexive learning on loopback. Offer inspection checks that the
 actual gathered candidates are local, and an error-path test verifies factory
 restoration if transceiver creation fails.
 
+Real offer/answer tests also inspect the connections behind the negotiated ICE
+transports and their gatherers, then inject authenticated external STUN into
+those objects. They verify the guard before and after SDP application and close
+the peers through both failure and cancellation. The probe owns the pinned
+peer's background negotiation tasks and cancels/joins them before transport
+shutdown; otherwise an in-flight aiortc negotiation can outlive `close()`.
+These tests retain HA's strict checks for leaked tasks and timers.
+
 ## Protocol hashes
 
 | Location | Purpose | Compatibility constraint |

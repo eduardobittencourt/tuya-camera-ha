@@ -56,7 +56,7 @@ def test_public_repository_and_generated_package(tmp_path, monkeypatch):
 ])
 async def test_synthetic_probe_rejects_invalid_ports_before_creating_peer(port):
     """Invalid input must not allocate a peer or reach the network."""
-    with patch.object(webrtc_probe, "RTCPeerConnection") as peer, pytest.raises(ValueError):
+    with patch.object(webrtc_probe, "ProbePeer") as peer, pytest.raises(ValueError):
         await webrtc_probe.run(port)
     peer.assert_not_called()
 

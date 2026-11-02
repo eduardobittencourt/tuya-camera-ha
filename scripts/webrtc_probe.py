@@ -14,6 +14,32 @@ from aiortc.sdp import SessionDescription
 MAX_ANSWER_SIZE = 256 * 1024
 
 
+class ProbePeer(RTCPeerConnection):
+    """Own the pinned peer's background negotiation tasks until close completes."""
+
+    def __init__(self, configuration):
+        self._negotiations: set[asyncio.Task] = set()
+        super().__init__(configuration)
+
+    def _RTCPeerConnection__connect(self):
+        # aiortc schedules this private hook with ensure_future. Returning an
+        # already-owned task also covers close before its coroutine first runs.
+        task = asyncio.create_task(super()._RTCPeerConnection__connect())
+        self._negotiations.add(task)
+        return task
+
+    async def close(self):
+        """Cancel and join negotiation before closing its ICE/DTLS transports."""
+        tasks = tuple(task for task in self._negotiations if task is not asyncio.current_task())
+        for task in tasks:
+            task.cancel()
+        try:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        finally:
+            self._negotiations.clear()
+            await super().close()
+
+
 class LoopbackConnection(Connection):
     """Bind only loopback and reject external STUN before peer-reflexive learning."""
 
@@ -52,7 +78,7 @@ async def run(port: int):
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError("The synthetic WebRTC API port must be between 1 and 65535")
     endpoint = f"http://127.0.0.1:{port}/api/webrtc?src=camera"
-    peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))
+    peer = ProbePeer(RTCConfiguration(iceServers=[]))
     seen = set()
     ready = asyncio.Event()
     tasks = []
