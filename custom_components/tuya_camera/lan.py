@@ -264,84 +264,105 @@ class LocalCamera:
         self.changed()
         return True
 
-    async def _connect(self) -> bool:
-        if self.media_client:
-            self._device = MediaLANDevice(self.media_client, self.camera_id)
-            result = await self._device.status()
-            if not self._apply(result):
-                return False
-            self.connected, self.status = True, "connected"
-            self._control_initialized = True
-            self._ready.set()
-            self.changed()
-            return True
+    async def _connect_media(self) -> bool:
+        """Reuse media-owned signaling without discovery or a second socket."""
+        self._device = MediaLANDevice(self.media_client, self.camera_id)
+        result = await self._device.status()
+        if not self._apply(result):
+            return False
+        self.connected, self.status = True, "connected"
+        self._control_initialized = True
+        self._ready.set()
+        self.changed()
+        return True
+
+    async def _discover_endpoint(self):
+        """Validate discovery before constructing a protocol client."""
         endpoint = await self._call(discover, self.camera_id, self.config.get("mac", ""),
                                     self.config.get("host", ""), self.config.get("version", ""))
+        if endpoint:
+            host, version = endpoint
+            if private_address(host):
+                return host, version
+        self.status = "not_discovered"
+        self.changed()
+        return None
+
+    @staticmethod
+    def _offline_result(response) -> bool:
+        """Recognize socket failures that a different protocol cannot repair."""
+        return isinstance(response, dict) and str(response.get("Err")) in ("901", "905")
+
+    async def _open_candidate(self, host, candidate):
+        """Open one protocol candidate and accept bounded pushed battery status."""
+        self._device = await self._call(
+            lambda: tinytuya.Device(self.camera_id, host, self.config["local_key"],
+                                    version=float(candidate), persist=True,
+                                    connection_timeout=1, connection_retry_limit=1),
+        )
+        if self.on_demand:
+            # These IPCs reject DP_QUERY but push valid reports afterwards.
+            # Device22 auto-detection would switch to an incompatible query.
+            self._device.disabledetect = True
+            self._control_initialized = False
+        result = await self._call(self._device.status)
+        if self.on_demand and not self._apply(result):
+            deadline = time.monotonic() + 8
+            while (not self._stopping.is_set() and self._window_open()
+                   and time.monotonic() < deadline):
+                if self._offline_result(result):
+                    break
+                result = await self._call(self._device.receive)
+                if self._apply(result):
+                    break
+        return result
+
+    async def _initialize_on_demand(self) -> bool:
+        """Drain startup reports before requesting scalar settings once, without ACK wait."""
+        # The first telemetry packet is not the end of IPC startup. These cameras
+        # can ignore a refresh sent before the rest of the initial reports.
+        for _ in range(3):
+            if self._stopping.is_set() or not self._window_open():
+                break
+            response = await self._call(self._device.receive)
+            if self._offline_result(response):
+                return False
+            self._apply(response)
+        if self._stopping.is_set() or not self._window_open():
+            return False
+        # Delayed reports are drained in _run; waiting for an ACK here can make
+        # TinyTuya close a perfectly usable socket.
+        indices = [int(item["id"]) for item in self.schema.values()
+                   if "r" in item.get("mode", "")
+                   and item.get("property", {}).get("type") in ("bool", "enum", "value")]
+        if indices:
+            await self._call(self._device.updatedps, indices, True)
+        return True
+
+    async def _connect(self) -> bool:
+        """Select shared media or connect one validated LAN protocol at a time."""
+        if self.media_client:
+            return await self._connect_media()
+        endpoint = await self._discover_endpoint()
         if not endpoint:
-            self.status = "not_discovered"
-            self.changed()
             return False
         host, version = endpoint
-        if not private_address(host):
-            self.status = "not_discovered"
-            self.changed()
-            return False
         for candidate in ([version] if version in self._versions else self._versions):
             if self._stopping.is_set():
                 return False
-            self._device = await self._call(
-                lambda v=candidate: tinytuya.Device(self.camera_id, host, self.config["local_key"],
-                                                   version=float(v), persist=True,
-                                                   connection_timeout=1, connection_retry_limit=1),
-            )
-            if self.on_demand:
-                # These IPCs reject DP_QUERY but push valid reports afterwards.
-                # Device22 auto-detection would switch to an incompatible query.
-                self._device.disabledetect = True
-                self._control_initialized = False
-            result = await self._call(self._device.status)
-            if self.on_demand and not self._apply(result):
-                deadline = time.monotonic() + 8
-                while (not self._stopping.is_set() and self._window_open()
-                       and time.monotonic() < deadline):
-                    if isinstance(result, dict) and str(result.get("Err")) in ("901", "905"):
-                        break
-                    result = await self._call(self._device.receive)
-                    if self._apply(result):
-                        break
+            result = await self._open_candidate(host, candidate)
             if self._apply(result):
                 self.config = {**self.config, "host": host, "version": candidate}
                 self.connected, self.status = True, "connected"
-                if self.on_demand:
-                    # The first telemetry packet is not the end of IPC startup.
-                    # Drain the initial reports before asking for settings;
-                    # these cameras can ignore an immediate refresh.
-                    for _ in range(3):
-                        if self._stopping.is_set() or not self._window_open():
-                            break
-                        response = await self._call(self._device.receive)
-                        if isinstance(response, dict) and str(response.get("Err")) in ("901", "905"):
-                            await self._close()
-                            return False
-                        self._apply(response)
-                    if self._stopping.is_set() or not self._window_open():
-                        await self._close()
-                        return False
-                    # Battery IPCs push only a few values spontaneously. Ask for
-                    # readable scalar DPs once per connection and drain their
-                    # delayed reports in _run; waiting for an ACK here can make
-                    # TinyTuya close a perfectly usable socket.
-                    indices = [int(item["id"]) for item in self.schema.values()
-                               if "r" in item.get("mode", "")
-                               and item.get("property", {}).get("type") in ("bool", "enum", "value")]
-                    if indices:
-                        await self._call(self._device.updatedps, indices, True)
+                if self.on_demand and not await self._initialize_on_demand():
+                    await self._close()
+                    return False
                 self._ready.set()
                 self.changed()
                 return True
             await self._close()
             # A refused/offline socket cannot be repaired by changing protocol.
-            if isinstance(result, dict) and str(result.get("Err")) in ("901", "905"):
+            if self._offline_result(result):
                 break
         self.status = "connection_failed"
         self.changed()
