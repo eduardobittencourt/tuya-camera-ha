@@ -42,6 +42,31 @@ after restoring official 0.4.0 recovered following an entry reload; the exact
 sequence of that physical-camera failure was not captured. Synthetic cancellation
 reproduces one way a source can become stuck and proves the corresponding fix.
 
-Physical verification of this candidate is pending a separately announced
-window. Keep that result distinct from synthetic-camera evidence and include
-startup retries, reload behavior, shared controls and final standby in the report.
+## Physical verification
+
+The announced window on 2026-11-02 ran from 00:55:38 to 01:05:47 BRT. The
+pre-installation query identified HA 2026.11.0b2 already running on the host.
+Runtime commit `b8c8e89` was installed temporarily; all 44 candidate files matched
+the package. Account configuration and all 19 entity bindings were preserved,
+with 17 entities enabled.
+
+The first cold snapshot succeeded in 6.5 seconds. HLS reception decoded 606
+H.264 video frames and 977 AAC audio frames over 63.0 seconds. PIR, night vision
+and sensitivity changes were confirmed and restored during playback. Entry
+reload preserved availability; the next snapshot succeeded in 2.1 seconds and
+the camera returned to standby with zero media processes.
+
+The old stream worker logged an I/O error followed by connection refusal during
+intentional entry reload. Post-reload capture and cleanup passed. The physical
+checks exercise normal startup/reload and control/media sharing; cancellation
+inside final-reader cleanup remains a synthetic fault-injection test.
+
+Official integration 0.4.0 was restored afterward, with all 44 files and
+account/entity fingerprints verified. Its first snapshot succeeded in 6.9
+seconds. Final state was HA running, integration loaded, camera standby with
+zero media processes and all three startup automations restored. The installed
+HA Core version remained 2026.11.0b2. Images/audio were processed in memory only.
+
+The observed HA libraries were aiortc 1.15.0, PyAV 19.0.0, aioice 0.10.2 and
+TinyTuya 1.20.0. These physical results complement the locked CI environment;
+they do not certify other cameras, every cloud/WebRTC path or all HA versions.
