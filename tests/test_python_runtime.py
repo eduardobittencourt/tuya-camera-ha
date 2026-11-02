@@ -44,9 +44,10 @@ async def test_runtime_start_failure_closes_session_and_preserves_cancellation(e
     session = AsyncMock()
     session.start.side_effect = error
     expected = MediaError if type(error) is RuntimeError else type(error)
+    packet = Mock()
     with patch("custom_components.tuya_camera.media.runtime.CloudSession", return_value=session), \
          pytest.raises(expected) as raised:
-        await runtime._open({"camera_id": "camera"}, False, Mock())
+        await runtime._open({"camera_id": "camera"}, False, packet)
     session.close.assert_awaited_once()
     assert "private-response" not in str(raised.value)
     assert runtime.camera_status["camera"]["state"] == "error"
@@ -60,9 +61,10 @@ async def test_failed_cloud_wake_closes_broker_and_lan_session():
     session = AsyncMock()
     session.connect.side_effect = OSError()
     camera = {"camera_id": "camera", "local": {"host": "192.168.0.2"}}
+    packet = Mock()
     with patch("custom_components.tuya_camera.media.runtime.LanSession", return_value=session), \
          pytest.raises(MediaError, match="media connection failed"):
-        await runtime._open(camera, True, Mock())
+        await runtime._open(camera, True, packet)
     broker.close.assert_awaited_once()
     session.start.assert_not_awaited()
     assert session.close.await_count >= 1

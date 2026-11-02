@@ -67,8 +67,9 @@ async def test_synthetic_probe_does_not_follow_redirects(aiohttp_server, socket_
     app.router.add_post("/redirect", redirect)
     app.router.add_get("/unexpected", unexpected)
     server = await aiohttp_server(app, host="127.0.0.1")
+    endpoint = str(server.make_url("/redirect"))
     with pytest.raises(ValueError, match="redirect"):
-        await webrtc_probe.run(str(server.make_url("/redirect")))
+        await webrtc_probe.run(endpoint)
     assert not followed
 
 
