@@ -77,3 +77,5 @@ real-camera results and limits; never retain private media or protocol payloads.
 See [SonarQube Cloud and coverage](sonarqube.md) for CI analysis, coverage artifacts and external-contribution limits.
 The [quality review](quality-review.md) records the robustness changes and
 protocol-specific findings that require contextual security review.
+The [media recovery note](media-session-recovery.md) describes interrupted
+last-reader cleanup, its regression coverage and physical-verification limits.

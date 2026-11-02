@@ -6,6 +6,7 @@ import os
 import re
 import struct
 import time
+from unittest.mock import patch
 
 import av
 import pytest
@@ -117,7 +118,47 @@ def inspect(url):
     return seen
 
 
-async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(tmp_path, monkeypatch, socket_enabled):
+async def snapshot_after_interrupted_close(source, relay):
+    """Interrupt a real LAN session after socket closure, then request a fresh JPEG."""
+    lease = await source.acquire()
+    session = source.session
+    writer = session.writer
+    original = writer.wait_closed
+    closing = asyncio.Event()
+    attempts = 0
+
+    async def wait_closed():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            closing.set()
+            await asyncio.Future()
+        await original()
+
+    with patch.object(writer, "wait_closed", side_effect=wait_closed):
+        release = asyncio.create_task(source.release(lease))
+        try:
+            await asyncio.wait_for(closing.wait(), 3)
+            release.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await release
+            assert session.transport is None
+            assert not source.consumers
+            jpeg = await relay.snapshot()
+            assert attempts == 2
+            assert session.writer is None
+            assert not session.tasks
+            assert session.failed.is_set()
+            return jpeg
+        finally:
+            release.cancel()
+            await asyncio.gather(release, return_exceptions=True)
+
+
+@pytest.mark.parametrize("interrupted_release", [False, True])
+async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(
+    tmp_path, monkeypatch, socket_enabled, interrupted_release,
+):
     ffmpeg = os.environ.get("TEST_FFMPEG_BINARY")
     if not ffmpeg:
         pytest.skip("Set TEST_FFMPEG_BINARY for actual media validation")
@@ -150,7 +191,8 @@ async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(tmp_path, mon
     relay = FfmpegRelay(ffmpeg, lambda: f"rtsp://127.0.0.1:{server.port}/camera", lambda: False)
     await relay.start()
     try:
-        jpeg = await relay.snapshot()
+        jpeg = (await snapshot_after_interrupted_close(source, relay)
+                if interrupted_release else await relay.snapshot())
         assert jpeg
         assert jpeg.startswith(b"\xff\xd8")
         with av.open(io.BytesIO(jpeg)) as picture:
