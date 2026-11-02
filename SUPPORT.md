@@ -1,8 +1,8 @@
 # Getting help
 
-Start with the [installation guide](docs/installation.md),
-[troubleshooting guide](docs/troubleshooting.md) and
-[compatibility table](docs/compatibility.md).
+Start with the [installation guide](docs/guides/installation.md),
+[troubleshooting guide](docs/guides/troubleshooting.md) and
+[compatibility table](docs/guides/compatibility.md).
 
 - **Questions and setup help:** [GitHub Discussions](https://github.com/eduardobittencourt/tuya-camera-ha/discussions).
 - **Reproducible bugs:** [bug report](https://github.com/eduardobittencourt/tuya-camera-ha/issues/new?template=bug_report.yml).

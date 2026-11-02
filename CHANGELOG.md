@@ -12,7 +12,7 @@
   documented. Remove the old beta selection after moving to stable 0.4.0.
 - Retain the immutable official aiortc PyAV-19 compatibility commit; the published
   aiortc 1.15.0 remains incompatible with HA PyAV 19. Existing model, offline-wake
-  and battery-endurance limits remain. See [validation](docs/validation-0.4.0.md).
+  and battery-endurance limits remain.
 
 ## 0.4.0b2 — Tuya Camera naming (beta)
 
@@ -21,9 +21,9 @@
 - Keep Python protocols, TinyTuya and media behavior unchanged.
 - This beta changes the HA integration identity. Existing `tuya_camera_bridge`
   installations need the migration/reinstallation procedure in
-  [installation](docs/installation.md); a restart alone cannot migrate registries.
+  [migration guide](docs/guides/migrations.md); a restart alone cannot migrate registries.
 - Validate the renamed package with 73 Python tests, three synthetic-media tests
-  and the existing real camera; see [results](docs/validation-0.4.0b2.md).
+  and the existing real camera.
 
 ## 0.4.0b1 — Python media migration (beta)
 
@@ -39,8 +39,6 @@
 - Pin the official upstream aiortc PyAV-19 compatibility commit for this beta.
   A compatible published aiortc release and wider retail-camera coverage remain
   prerequisites for a stable migration release.
-
-See [beta validation](docs/validation-0.4.0b1.md) for actual results and limits.
 
 
 ## Unreleased

@@ -4,13 +4,10 @@ Use Python 3.14.8 or newer in the 3.14 series for the Linux CI environment.
 `pyproject.toml` declares test dependencies; `requirements-test.txt` locks the
 resolved versions and hashes. Home Assistant and its pytest plugin pins must
 be updated together, followed by a lock refresh. No Go toolchain is
-required. Read [AGENTS.md](../AGENTS.md) before changing protocol code.
+required. Read [AGENTS.md](../../AGENTS.md) before changing protocol code.
 
-The validation pair is Home Assistant 2026.10.4 with
-`pytest-homeassistant-custom-component` 0.13.375. Its dependency resolution
-selects uv 0.13.5, including the fix for GHSA-hq85-5cpj-mr62. See the
-[dependency security review](test-dependency-security.md) for the remaining
-Pillow constraint and the distinction between test and integration dependencies.
+Use the pins in `pyproject.toml` and the lockfiles as the source of truth for
+the HA test environment. Keep runtime and development dependencies distinct.
 
 ```sh
 uv venv --python 3.14
@@ -69,15 +66,14 @@ TEST_WEBRTC_PROBE=scripts/webrtc_probe.py \
 ```
 
 Activate `.venv` when using the executable probe so its Python dependencies
-are found. Research/tools belong under `~/research/tuya-camera-ha/`, outside
-release payloads. The [CI workflow](../.github/workflows/ci.yml) defines tool
+are found. Keep temporary tools outside release payloads. The [CI workflow](../../.github/workflows/ci.yml) defines tool
 versions and downloads. Its checksum-pinned FFmpeg wheel is test tooling only.
 
 The synthetic WebRTC probe takes the go2rtc API **port**, not a URL:
 `scripts/webrtc_probe.py 1984`. It always posts to
 `http://127.0.0.1:PORT/api/webrtc?src=camera`, rejects redirects and checks the
 answer's ICE candidates before giving them to aiortc. The test harness provides
-the port of its own synthetic server. See [security boundaries](security-boundaries.md)
+the port of its own synthetic server. See [security boundaries](../reference/security.md)
 for the archive limits, probe restrictions and protocol-hash review.
 The release checker accepts only this repository's `dist/tuya_camera.zip` and
 rejects symlinks escaping the release directory. Generate the default archive
@@ -89,10 +85,6 @@ extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
 hassfest. Synthetic peers cannot certify another retail camera. Record sanitized
 real-camera results and limits; never retain private media or protocol payloads.
 
-## SonarQube Cloud
+## CI
 
-See [SonarQube Cloud and coverage](sonarqube.md) for CI analysis, coverage artifacts and external-contribution limits.
-The [quality review](quality-review.md) records the robustness changes and
-protocol-specific findings that require contextual security review.
-The [media recovery note](media-session-recovery.md) describes interrupted
-last-reader cleanup, its regression coverage and physical-verification limits.
+See [CI and analysis](ci.md) and [release preparation](releasing.md).

@@ -20,10 +20,14 @@ REQUIRED = (
     "CODE_OF_CONDUCT.md", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/compatibility_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml",
-    ".github/workflows/validate.yml", "docs/README.pt-BR.md", "docs/installation.md",
-    "docs/compatibility.md", "docs/troubleshooting.md", "docs/architecture.md",
-    "docs/development.md", "docs/releasing.md", "docs/validation-0.3.0b1.md",
-    "docs/validation-0.3.1.md", "docs/validation-0.4.0.md",
+    ".github/workflows/validate.yml", "docs/README.md",
+    "docs/guides/overview.pt-BR.md", "docs/guides/installation.md",
+    "docs/guides/configuration.md", "docs/guides/compatibility.md",
+    "docs/guides/entities.md", "docs/guides/migrations.md",
+    "docs/guides/troubleshooting.md", "docs/reference/architecture.md",
+    "docs/reference/security.md", "docs/reference/branding.md",
+    "docs/development/testing.md", "docs/development/releasing.md",
+    "docs/development/ci.md",
 )
 
 

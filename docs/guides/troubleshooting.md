@@ -13,11 +13,10 @@ manual install, confirm `manifest.json` is directly inside
 
 ## Python dependency installation fails
 
-Version 0.4.x does not download a bridge executable. Check the HA package-install
-error and access to GitHub/Python package indexes. Version 0.4.0 pins an upstream
-aiortc commit supporting HA's PyAV 19; do not downgrade HA's PyAV or bypass its
-constraints. Include the sanitized dependency error and HA version in a report.
-See [dependency details](architecture.md#dependencies-and-compatibility).
+Check the HA package-install error and access to GitHub/Python package indexes. The manifest pins an upstream
+aiortc commit compatible with the declared HA environment. Do not downgrade
+HA's PyAV or bypass its constraints. Include the sanitized dependency error and HA version in a report.
+See [dependency details](../reference/architecture.md#dependencies-and-compatibility).
 
 ## Login fails or finds no cameras
 
@@ -33,9 +32,8 @@ Use Reconfigure to refresh the camera list with the existing account.
 ## A discovered camera has no video
 
 Discovery only proves that the account lists the device. Confirm it is online
-in the mobile app, then wait for wake-up/connection establishment. The tested
-camera's cold HLS startup was about 15–18 seconds; other devices can differ.
-Check Tuya connectivity and that this model supports mobile WebRTC.
+in the mobile app, then wait for wake-up/connection establishment. Check Tuya
+connectivity and that this model supports mobile WebRTC.
 
 `connection_status: standby` means the Python media service is ready; it does not prove the
 camera is reachable. `video` and `last_video_received` report actual received
@@ -47,10 +45,8 @@ An old timestamp while idle is not a current connectivity test.
 Home Assistant limits camera image requests to ten seconds. A cold battery
 camera can take longer to wake and establish its Tuya connection, so the first
 image may fail even when live video works. Open live video, wait for actual
-playback and retry the image. Release v0.3.1 reduces FFmpeg probing overhead,
-but live testing still observed intermittent cold-image failures. See the
-[stable validation report](validation-0.3.1.md). An old cached image is not used
-to hide a disconnected camera.
+playback and retry the image. An old cached image is not used to hide a
+disconnected camera.
 
 ## Video opens without sound
 
@@ -64,15 +60,15 @@ speaker/talkback support; two-way audio is not exposed.
 H.265 requires software H.264 conversion. Independent streaming consumers can
 start additional FFmpeg processes; native HLS viewers normally share a stream.
 Snapshots also launch a short-lived decoder. Test one viewer before adding
-multiple dashboards/consumers and compare with the measured validation results.
+multiple dashboards/consumers to isolate the load.
 `active_media_processes` is an operational count, not an error by itself.
 
 ## Recovery and expired sessions
 
 A failed media session closes its affected readers; the next media request
 creates a fresh session. Recognized expired sessions require a new login in HA.
-An unreachable camera cannot be repaired by reloading the integration alone; it must come back online. Long camera/WAN outages
-have not been fully validated on the real test device.
+An unreachable camera must come back online before playback can recover.
+Prolonged camera/WAN outages remain outside the established compatibility scope.
 
 ## Reporting safely
 
@@ -80,4 +76,4 @@ Use [the bug form](https://github.com/eduardobittencourt/tuya-camera-ha/issues/n
 Describe expected/actual behavior and repeatable steps. Share only reviewed,
 sanitized HA error excerpts. Do not attach `.storage`, a backup, account configuration,
 raw MQTT/WebRTC/SDK output, credentials, keys, IDs or a private camera image.
-Security problems belong in [private reporting](../SECURITY.md).
+Security problems belong in [private reporting](../../SECURITY.md).

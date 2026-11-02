@@ -21,9 +21,9 @@ authentication protects remote access.
 Raw protocol output, credential-bearing errors, session fields, signing material,
 identifiers and stream URLs must never appear in logs or diagnostics. Diagnostics
 expose operational state, sanitized counters and FFmpeg process counts only.
-Dependencies are declared in the integration manifest; the current beta's aiortc
+Dependencies are declared in the integration manifest; the aiortc
 upstream commit pin and compatibility limits are documented in
-[architecture](docs/architecture.md).
+[architecture](docs/reference/architecture.md).
 
 The supported firmware fixes the legacy wire algorithms: protocol-3.3 TCP
 signaling uses AES-ECB with CRC framing, local media uses AES-CBC with verified
