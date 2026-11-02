@@ -24,6 +24,7 @@ class FfmpegRelay:
         self._path = f"/{secrets.token_urlsafe(24)}.ts"
         self._server: asyncio.Server | None = None
         self._tasks: set[asyncio.Task] = set()
+        self._http_clients: set[asyncio.Task] = set()
         self._processes: set[asyncio.subprocess.Process] = set()
         self._slots = asyncio.Semaphore(4)
         self._snapshot_lock = asyncio.Lock()
@@ -144,10 +145,11 @@ class FfmpegRelay:
         process: asyncio.subprocess.Process | None = None
         active = False
         try:
-            if len(self._tasks) > MAX_CLIENTS:
+            if len(self._http_clients) >= MAX_CLIENTS:
                 writer.write(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
                 await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
                 return
+            self._http_clients.add(task)
             async with asyncio.timeout(5):
                 headers = await reader.readuntil(b"\r\n\r\n")
             if headers.split(b"\r\n", 1)[0] != f"GET {self._path} HTTP/1.1".encode():
@@ -194,3 +196,4 @@ class FfmpegRelay:
             except OSError:
                 writer.transport.abort()
             self._tasks.discard(task)
+            self._http_clients.discard(task)

@@ -65,6 +65,7 @@ async def test_failed_cloud_wake_closes_broker_and_lan_session():
     with patch("custom_components.tuya_camera.media.runtime.LanSession", return_value=session), \
          pytest.raises(MediaError, match="media connection failed"):
         await runtime._open(camera, True, packet)
+    broker.wake.assert_awaited_once()
     broker.close.assert_awaited_once()
     session.start.assert_not_awaited()
     assert session.close.await_count >= 1

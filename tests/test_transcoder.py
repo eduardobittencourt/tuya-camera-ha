@@ -132,3 +132,38 @@ async def test_excess_http_consumers_are_rejected_without_starting_ffmpeg(socket
         await first_writer.wait_closed()
         await relay.stop()
     assert not relay._tasks
+    assert not relay._http_clients
+
+
+@pytest.mark.parametrize("control", [False, True])
+async def test_pending_media_does_not_consume_http_capacity(control, socket_enabled, monkeypatch):
+    monkeypatch.setattr("custom_components.tuya_camera.transcoder.MAX_CLIENTS", 1)
+    launched = asyncio.Event()
+    create_process = asyncio.create_subprocess_exec
+
+    async def blocking_media(*_args, **kwargs):
+        process = await create_process(sys.executable, "-c", "import time; time.sleep(60)", **kwargs)
+        launched.set()
+        return process
+
+    relay = FfmpegRelay("unused", lambda: "unused", lambda: False)
+    await relay.start()
+    parsed = urlsplit(relay.url)
+    try:
+        with patch("asyncio.create_subprocess_exec", side_effect=blocking_media):
+            media = asyncio.create_task(relay.control_session(lambda: None) if control else relay.snapshot())
+            await asyncio.wait_for(launched.wait(), 2)
+            reader, writer = await asyncio.open_connection(parsed.hostname, parsed.port)
+            try:
+                writer.write(b"GET /wrong HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                await writer.drain()
+                assert (await asyncio.wait_for(reader.read(), 1)).startswith(b"HTTP/1.1 404")
+            finally:
+                writer.close()
+                await writer.wait_closed()
+    finally:
+        await relay.stop()
+    assert media.cancelled()
+    assert not relay._http_clients
+    assert not relay._tasks
+    assert relay.active_processes == 0

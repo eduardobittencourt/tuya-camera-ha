@@ -21,6 +21,9 @@ suite passed 73 Python tests and three real synthetic-media tests.
   after acquisition. Closing the RTSP connection can then release its session.
 - Bound HTTP relay consumers and response writes, retaining the existing
   four-process streaming limit and cancellation/process-group cleanup.
+  Count HTTP clients separately from snapshot and control-session tasks so
+  those operations do not exhaust the HTTP admission limit. Regression tests
+  cover both concurrent operations and rejection of excess HTTP clients.
 - Reject short signaling frames with a protocol error before unpacking fields.
   Split KCP acknowledgement processing and RTSP connection handling into smaller
   units while preserving wire formats and shared-session behavior.
@@ -64,7 +67,7 @@ and language before changing their status. This review does not dismiss them.
 
 ## Validation
 
-Local validation on 2026-11-01 passed 126 Python tests, three real synthetic-media
+Local validation on 2026-11-01 passed 128 Python tests, three real synthetic-media
 tests and the JavaScript release-gate test. Ruff, actionlint, `pip check`, HACS
 archive/content checks and Gitleaks also passed. The clean environment used both
 hash-locked requirement files. Combined Python line/branch coverage was 82%;
