@@ -271,3 +271,113 @@ async def test_failed_session_rejects_overlapping_reader_then_reconnects():
     finally:
         await source.release(new)
     replacement.close.assert_awaited_once()
+
+
+@pytest.mark.parametrize("failed", [False, True])
+async def test_interrupted_last_release_cleans_old_session_before_reconnecting(failed):
+    """An interrupted close without readers must not poison all later requests."""
+    closing, closed = asyncio.Event(), asyncio.Event()
+    first, replacement = AsyncMock(), AsyncMock()
+    for session in (first, replacement):
+        session.failed = asyncio.Event()
+        session.hevc, session.audio_codec = False, "L16/8000/1"
+
+    async def close():
+        if first.close.await_count == 1:
+            closing.set()
+            await asyncio.Future()
+        closed.set()
+
+    first.close.side_effect = close
+
+    async def factory(_packet):
+        if open_session.await_count == 1:
+            return first
+        assert closed.is_set()
+        return replacement
+
+    open_session = AsyncMock(side_effect=factory)
+    ended = Mock()
+    source = MediaSource(open_session, lambda: None, ended)
+    old = await source.acquire()
+    source.parameters[7] = b"old codec parameters"
+    source.video_seen, source.last_report = True, 1
+    if failed:
+        first.failed.set()
+    release = asyncio.create_task(source.release(old))
+    await asyncio.wait_for(closing.wait(), 1)
+    release.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await release
+    assert not source.consumers
+    assert source.session is first
+    try:
+        new = await source.acquire()
+        assert source.session is replacement
+        assert source.consumers == {new}
+        assert open_session.await_count == 2
+        assert first.close.await_count == 2
+        assert not source.parameters
+        assert not source.video_seen
+        assert source.last_report == 0
+        ended.assert_called_once_with(failed)
+    finally:
+        await source.stop()
+    replacement.close.assert_awaited_once()
+
+
+async def test_rtsp_request_recovers_after_interrupted_reader_cleanup(socket_enabled):
+    """A fresh TCP reader replaces an unowned session after cleanup cancellation."""
+    closing = asyncio.Event()
+    first, replacement = AsyncMock(), AsyncMock()
+    for session in (first, replacement):
+        session.failed = asyncio.Event()
+        session.hevc, session.audio_codec = False, "L16/8000/1"
+    replacement.hevc = True
+
+    async def close():
+        if first.close.await_count == 1:
+            closing.set()
+            await asyncio.Future()
+
+    first.close.side_effect = close
+    factory = AsyncMock(side_effect=[first, replacement])
+    source = MediaSource(factory, lambda: None)
+    server = RtspServer({"/camera": source})
+    await server.start()
+    writers = []
+    try:
+        reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+        writers.append(writer)
+        request = f"DESCRIBE rtsp://127.0.0.1:{server.port}/camera RTSP/1.0\r\nCSeq: 1\r\n\r\n".encode()
+        writer.write(request)
+        await writer.drain()
+        assert b"200 OK" in await reader.readuntil(b"\r\n\r\n")
+        writer.close()
+        await writer.wait_closed()
+        await asyncio.wait_for(closing.wait(), 1)
+        tasks = tuple(server.tasks)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        assert not source.consumers
+        reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+        writers.append(writer)
+        writer.write(request)
+        await writer.drain()
+        headers = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), 1)
+        assert b"200 OK" in headers
+        length = int(next(line.split(b":", 1)[1] for line in headers.split(b"\r\n")
+                          if line.lower().startswith(b"content-length:")))
+        body = await reader.readexactly(length)
+        assert b"H265/90000" in body
+        assert source.session is replacement
+        assert factory.await_count == 2
+        assert first.close.await_count == 2
+    finally:
+        for writer in writers:
+            writer.close()
+            await writer.wait_closed()
+        await server.stop()
+    assert not server.tasks
+    assert source.session is None
