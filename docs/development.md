@@ -11,7 +11,8 @@ uv pip install '.[test]'
 .venv/bin/pytest -m 'not media'
 .venv/bin/python scripts/package_release.py
 .venv/bin/python scripts/check_repository.py --archive dist/tuya_camera.zip
-node --test tests/test_release_gate.cjs
+node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout \
+  --test-reporter=lcov --test-reporter-destination=coverage-js.lcov tests/test_release_gate.cjs
 ```
 
 ## Protocol and media validation
@@ -45,3 +46,7 @@ Before publishing, run a clean dependency resolution for the declared test
 extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
 hassfest. Synthetic peers cannot certify another retail camera. Record sanitized
 real-camera results and limits; never retain private media or protocol payloads.
+
+## SonarQube Cloud
+
+See [SonarQube Cloud and coverage](sonarqube.md) for CI analysis, coverage artifacts and external-contribution limits.

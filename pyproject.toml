@@ -33,3 +33,9 @@ include = ["custom_components*"]
 
 [tool.setuptools.package-data]
 "custom_components.tuya_camera" = ["*.json", "translations/*.json", "vendor/TUYA_MOBILE_LICENSE", "brand/*.png", "BRAND_ASSETS.md"]
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["custom_components/tuya_camera"]
+omit = ["custom_components/tuya_camera/vendor/*"]
