@@ -145,16 +145,19 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
         # Home Assistant cancels image requests at its ten-second deadline.
         async with asyncio.timeout(10):
             cold_image = await relay.snapshot()
-        assert cold_image and cold_image.startswith(b"\xff\xd8")
+        assert cold_image
+        assert cold_image.startswith(b"\xff\xd8")
         ready = asyncio.Event()
         control = asyncio.create_task(relay.control_session(ready.set))
         try:
             await asyncio.wait_for(ready.wait(), 10)
-            assert relay.active_processes == 1 and activity[-1] is True
+            assert relay.active_processes == 1
+            assert activity[-1] is True
         finally:
             control.cancel()
             await asyncio.gather(control, return_exceptions=True)
-        assert relay.active_processes == 0 and activity[-1] is False
+        assert relay.active_processes == 0
+        assert activity[-1] is False
         await asyncio.to_thread(inspect_stream, relay.url)
         assert await async_setup_component(hass, "stream", {})
         stream = create_stream(hass, relay.url, {}, DynamicStreamSettings())
@@ -174,7 +177,8 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
         stream = None
         await inspect_webrtc(relay, ffmpeg, tmp_path)
         image = await relay.snapshot()
-        assert image and image.startswith(b"\xff\xd8")
+        assert image
+        assert image.startswith(b"\xff\xd8")
         await stop_process(publisher)
         assert await relay.snapshot() is None
     finally:
@@ -187,7 +191,8 @@ async def test_synthetic_camera_delivers_video_audio_and_fresh_snapshot(codec, t
             await stop_process(publisher)
         await stop_process(server)
     assert relay.active_processes == 0
-    assert activity and activity.count(True) == activity.count(False)
+    assert activity
+    assert activity.count(True) == activity.count(False)
     consumers = 0
     for active in activity:
         consumers += 1 if active else -1

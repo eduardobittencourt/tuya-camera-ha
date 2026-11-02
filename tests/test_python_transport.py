@@ -14,9 +14,29 @@ from custom_components.tuya_camera.media.crypto import (
     unpack_signal,
 )
 from custom_components.tuya_camera.media.kcp import HEADER, KCP
+from custom_components.tuya_camera.media.lan import LanSession
 from custom_components.tuya_camera.media.rtsp import MediaSource
 
 KEY = b"0123456789abcdef"
+
+
+@pytest.mark.parametrize("length", range(24))
+def test_short_signal_is_a_protocol_error(length):
+    with pytest.raises(ValueError, match="Short LAN frame"):
+        unpack_signal(KEY, bytes(length))
+
+
+def test_authenticated_unknown_conversations_cannot_grow_peer_state():
+    from custom_components.tuya_camera.media.crypto import authenticate
+
+    session = LanSession({"local": {"host": "192.168.0.2", "local_key": KEY.decode()}}, "test", lambda *_: None)
+    session.aes_key = KEY
+    for conversation in range(100):
+        body = HEADER.pack(conversation, 84, 0, 512, 0, 0, 0, 0)
+        session.datagram_received(body + authenticate(KEY, body), (session.host, 1234))
+    assert len(session.channels) == 8
+    assert len(session.peers) == 8
+    assert session.stats["Malformed"] == 92
 
 
 def test_native_33_signal_layout_and_corruption():
@@ -33,8 +53,9 @@ def test_native_33_signal_layout_and_corruption():
     assert unpack_signal(KEY, response)[1] == {"dps": {"1": True}}
     with pytest.raises(ValueError, match="checksum"):
         unpack_signal(KEY, frame[:-1] + b"\0")
+    truncated = encrypt(KEY, b"hello")[:-1]
     with pytest.raises(ValueError):
-        decrypt(KEY, encrypt(KEY, b"hello")[:-1])
+        decrypt(KEY, truncated)
 
 
 @pytest.mark.parametrize("long", [False, True])
@@ -84,7 +105,8 @@ def test_kcp_loss_duplicates_reordering_and_wrap():
     for packet in left_wire:
         right.input(packet, 401)
     assert received == [payload]
-    assert not right.pending and not right.fragments
+    assert not right.pending
+    assert not right.fragments
     assert hashlib.sha256(received[0]).digest() == hashlib.sha256(payload).digest()
 
 
@@ -93,8 +115,9 @@ def test_kcp_rejects_bad_lengths_and_limits_memory():
     with pytest.raises(ValueError):
         channel.input(HEADER.pack(1, 81, 0, 512, 0, 0, 0, 100), 0)
     assert not channel.pending
+    oversized = bytes(1376 * 256)
     with pytest.raises(BufferError):
-        channel.send(bytes(1376 * 256))
+        channel.send(oversized)
     # Far-future data cannot allocate outside the receive window.
     channel.input(HEADER.pack(1, 81, 0, 512, 0, 999999, 0, 1) + b"x", 0)
     assert not channel.pending

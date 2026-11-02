@@ -7,6 +7,10 @@ from collections.abc import Callable
 
 from .process import stop_process
 
+MAX_CLIENTS = 16
+WRITE_TIMEOUT = 5
+OUTPUT_PIPE = "pipe:1"
+
 
 class FfmpegRelay:
     """Expose H.264/AAC MPEG-TS over loopback for native HA streaming."""
@@ -20,6 +24,7 @@ class FfmpegRelay:
         self._path = f"/{secrets.token_urlsafe(24)}.ts"
         self._server: asyncio.Server | None = None
         self._tasks: set[asyncio.Task] = set()
+        self._http_clients: set[asyncio.Task] = set()
         self._processes: set[asyncio.subprocess.Process] = set()
         self._slots = asyncio.Semaphore(4)
         self._snapshot_lock = asyncio.Lock()
@@ -60,7 +65,7 @@ class FfmpegRelay:
             self.binary, "-hide_banner", "-loglevel", "error", "-nostdin", "-rtsp_transport", "tcp",
             "-timeout", "35000000", "-i", self.source(), "-map", "0:v:0", "-map", "0:a:0?", *video,
             "-c:a", "aac", "-ac", "1", "-ar", "16000", "-b:a", "48k", "-f", "mpegts",
-            "-mpegts_flags", "+resend_headers", "-muxdelay", "0", "pipe:1",
+            "-mpegts_flags", "+resend_headers", "-muxdelay", "0", OUTPUT_PIPE,
         ]
 
     async def snapshot(self) -> bytes | None:
@@ -81,7 +86,7 @@ class FfmpegRelay:
                 "-timeout", "35000000", "-allowed_media_types", "video", "-fpsprobesize", "0",
                 "-analyzeduration", "1000000", "-probesize", "512000",
                 "-i", self.source(), "-frames:v", "1", "-f", "image2pipe",
-                "-c:v", "mjpeg", "pipe:1", stdin=asyncio.subprocess.DEVNULL,
+                "-c:v", "mjpeg", OUTPUT_PIPE, stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
             )
             self._processes.add(process)
@@ -108,7 +113,7 @@ class FfmpegRelay:
                 self.binary, "-hide_banner", "-loglevel", "error", "-nostdin", "-rtsp_transport", "tcp",
                 "-timeout", "35000000", "-allowed_media_types", "video", "-fpsprobesize", "0",
                 "-analyzeduration", "1000000", "-probesize", "512000", "-i", self.source(),
-                "-map", "0:v:0", "-c:v", "copy", "-an", "-f", "mpegts", "-muxdelay", "0", "pipe:1",
+                "-map", "0:v:0", "-c:v", "copy", "-an", "-f", "mpegts", "-muxdelay", "0", OUTPUT_PIPE,
                 stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL, start_new_session=True,
             )
@@ -121,7 +126,8 @@ class FfmpegRelay:
                 active = True
                 ready()
                 while await process.stdout.read(65536):
-                    pass
+                    # Discard video while the command owns the camera session.
+                    continue
         finally:
             if process is not None:
                 await stop_process(process)
@@ -139,11 +145,16 @@ class FfmpegRelay:
         process: asyncio.subprocess.Process | None = None
         active = False
         try:
+            if len(self._http_clients) >= MAX_CLIENTS:
+                writer.write(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
+                return
+            self._http_clients.add(task)
             async with asyncio.timeout(5):
                 headers = await reader.readuntil(b"\r\n\r\n")
             if headers.split(b"\r\n", 1)[0] != f"GET {self._path} HTTP/1.1".encode():
                 writer.write(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-                await writer.drain()
+                await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
                 return
             async with self._slots:
                 process = await asyncio.create_subprocess_exec(
@@ -158,19 +169,19 @@ class FfmpegRelay:
                     first = await process.stdout.read(65536)
                 if not first:
                     writer.write(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n")
-                    await writer.drain()
+                    await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
                     return
                 writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: video/MP2T\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n")
                 writer.write(first)
-                await writer.drain()
+                await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
                 while True:
                     async with asyncio.timeout(40):
                         data = await process.stdout.read(65536)
                     if not data:
                         break
                     writer.write(data)
-                    await writer.drain()
-        except (OSError, ConnectionError, TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+                    await asyncio.wait_for(writer.drain(), WRITE_TIMEOUT)
+        except (OSError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
             pass
         finally:
             if process is not None:
@@ -182,6 +193,7 @@ class FfmpegRelay:
             try:
                 async with asyncio.timeout(2):
                     await writer.wait_closed()
-            except (OSError, ConnectionError, TimeoutError):
+            except OSError:
                 writer.transport.abort()
             self._tasks.discard(task)
+            self._http_clients.discard(task)

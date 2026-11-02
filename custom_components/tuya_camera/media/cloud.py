@@ -132,7 +132,7 @@ class Broker:
             return
         try:
             value = json.loads(message.payload)
-        except (ValueError, UnicodeError):
+        except ValueError:
             return
         def deliver():
             if isinstance(value, dict) and not self.messages.full():
@@ -369,7 +369,7 @@ class CloudSession:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         if self.broker:
-            with suppress(OSError, TimeoutError, MediaError):
+            with suppress(OSError, MediaError):
                 await self.send("disconnect", {"mode": "webrtc"})
             await self.broker.close()
             self.broker = None

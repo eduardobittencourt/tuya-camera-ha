@@ -14,6 +14,7 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENT = ROOT / "custom_components" / "tuya_camera"
+MANIFEST_NAME = "manifest.json"
 REQUIRED = (
     "README.md", "LICENSE", "NOTICE", "SECURITY.md", "SUPPORT.md", "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md",
@@ -38,7 +39,7 @@ def check_repository() -> dict:
     documents.append(COMPONENT / "BRAND_ASSETS.md")
     for path in documents:
         text = path.read_text()
-        links = re.findall(r"\]\(([^\s)]+)(?:\s+[^)]*)?\)", text)
+        links = [body.split(maxsplit=1)[0] for body in re.findall(r"\]\(([^)]*)\)", text) if body.strip()]
         links.extend(re.findall(r'<img\b[^>]*\bsrc="([^"]+)"', text))
         for link in links:
             url = urlsplit(link.strip("<>"))
@@ -47,13 +48,13 @@ def check_repository() -> dict:
             target = (path.parent / unquote(url.path)).resolve()
             require(target.is_relative_to(ROOT) and target.exists(),
                     f"Broken relative link in {path.relative_to(ROOT)}: {link}")
-    manifest = json.loads((COMPONENT / "manifest.json").read_text())
+    manifest = json.loads((COMPONENT / MANIFEST_NAME).read_text())
     hacs = json.loads((ROOT / "hacs.json").read_text())
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     require(manifest["version"] == project["version"], "Release versions differ")
     require(f'VERSION = "{manifest["version"]}"' in (COMPONENT / "__init__.py").read_text(),
             "Runtime version differs from manifest")
-    integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / "manifest.json").exists()]
+    integrations = [p for p in (ROOT / "custom_components").iterdir() if (p / MANIFEST_NAME).exists()]
     require(integrations == [COMPONENT], "HACS repository must contain exactly one integration")
     require(not (ROOT / "custom_components" / "tuya_camera_bridge").exists(),
             "The former integration directory must not remain alongside tuya_camera")
@@ -64,7 +65,7 @@ def check_repository() -> dict:
     # hacs/default scans *manifest.json across the clone before running hassfest.
     # Keep auxiliary JSON names outside that glob to avoid ambiguous discovery.
     catalog_manifests = list((ROOT / "custom_components").rglob("*manifest.json"))
-    require(catalog_manifests == [COMPONENT / "manifest.json"],
+    require(catalog_manifests == [COMPONENT / MANIFEST_NAME],
             "HACS catalog discovery must find only the integration manifest")
     require(manifest["domain"] == COMPONENT.name, "Integration domain differs from its directory")
     require(hacs["zip_release"] and hacs["filename"] == "tuya_camera.zip",
@@ -97,7 +98,7 @@ def check_archive(path: Path, manifest: dict) -> None:
         require(set(names) == set(expected), "Archive files differ from the reviewed integration")
         for name, source in expected.items():
             require(archive.read(name) == source.read_bytes(), f"Archive content differs: {name}")
-        require(json.loads(archive.read("manifest.json")) == manifest, "Archive manifest differs")
+        require(json.loads(archive.read(MANIFEST_NAME)) == manifest, "Archive manifest differs")
     sums = f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
     require((path.parent / "SHA256SUMS").read_text() == sums, "Published archive checksum differs")
 

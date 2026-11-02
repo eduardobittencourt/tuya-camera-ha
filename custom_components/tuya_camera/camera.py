@@ -52,7 +52,7 @@ class TuyaCamera(Camera):
 
     async def async_update(self) -> None:
         if self._runtime.media.ready and self._needs_probe():
-            with suppress(OSError, TimeoutError):
+            with suppress(OSError):
                 await self._runtime.relays[self._camera_id].snapshot()
 
     @property
@@ -84,5 +84,5 @@ class TuyaCamera(Camera):
             return None
         try:
             return await self._runtime.relays[self._camera_id].snapshot()
-        except (OSError, TimeoutError):
+        except OSError:
             return None

@@ -28,6 +28,24 @@ CAMERA = {"camera_id": "synthetic-camera", "camera_name": "Synthetic camera",
           "local": {"local_key": KEY, "schema": SCHEMA}}
 
 
+async def test_cancelling_delayed_release_preserves_media_for_the_next_command(hass):
+    local = LocalCamera(hass, "entry", CAMERA)
+    media = asyncio.create_task(asyncio.Event().wait())
+    local._command_media_task = media
+    release = asyncio.create_task(local._release_command_media())
+    await asyncio.sleep(0)
+    release.cancel()
+    try:
+        with pytest.raises(asyncio.CancelledError):
+            await release
+        assert local._command_media_task is media
+        assert not media.done()
+    finally:
+        await local.stop()
+    assert media.cancelled()
+    assert local._command_media_task is None
+
+
 @pytest.mark.parametrize("address", ["1.1.1.1", "169.254.169.254", "127.0.0.1", "0.0.0.0",
                                      "camera.example.org", "::1", "224.0.0.1", "100.64.0.1"])
 def test_rejects_non_lan_endpoints(address):
@@ -232,7 +250,8 @@ async def test_encrypted_local_camera_read_write_event_and_shutdown(hass, socket
                     local._apply(await local._call(local._device.receive), live=True)
             assert local.motion
             await local.stop()
-            assert not local.connected and local._device is None
+            assert not local.connected
+            assert local._device is None
     finally:
         await local.stop()
         server.close()
@@ -274,7 +293,8 @@ async def test_battery_idle_has_no_discovery_and_concurrent_media_share_one_sock
         local.media_activity(True)
         local.media_activity(True)
         await asyncio.wait_for(resumed.wait(), 1)
-        assert local.connected and local.values["wireless_electricity"] == 80
+        assert local.connected
+        assert local.values["wireless_electricity"] == 80
         local.media_activity(False)
         assert local._window_open()  # Other consumer still holds the shared session.
         factory.assert_called_once()
@@ -282,7 +302,8 @@ async def test_battery_idle_has_no_discovery_and_concurrent_media_share_one_sock
         local._media_until = 0
         idle.clear()
         await asyncio.wait_for(idle.wait(), 1)
-        assert not local.connected and local.status == "standby"
+        assert not local.connected
+        assert local.status == "standby"
         assert local.values["wireless_electricity"] == 80
         assert local.observed_at["wireless_electricity"]
         device.close.assert_called_once()
@@ -292,7 +313,8 @@ async def test_battery_idle_has_no_discovery_and_concurrent_media_share_one_sock
         await asyncio.wait_for(resumed.wait(), 1)
         assert factory.call_count == 2
         await local.stop()
-    assert local._task is None and not local.connected
+    assert local._task is None
+    assert not local.connected
 
 
 async def test_battery_command_cannot_confirm_itself_from_cached_value(hass):

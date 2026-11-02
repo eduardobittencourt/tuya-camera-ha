@@ -59,7 +59,8 @@ async def test_lan_bootstrap_uses_exact_device_and_product_without_cloud_states(
     assert result == {"local_key": "test-lan-key1234", "mac": "aa:bb", "schema": [
         {"id": 108, "code": "basic_nightvision", "mode": "rw", "property": {"type": "enum"}},
     ]}
-    assert "dps" not in result and "secKey" not in result
+    assert "dps" not in result
+    assert "secKey" not in result
     assert "test-lan-key1234" not in repr(CameraInfo("camera", "Camera", local_config=result))
 
 

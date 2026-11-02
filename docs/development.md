@@ -1,12 +1,17 @@
 # Development
 
-Use Python 3.14. Install the test dependencies from `pyproject.toml`; its Home
-Assistant and pytest plugin pins must be updated together. No Go toolchain is
+Use Python 3.14.8 or newer in the 3.14 series for the Linux CI environment.
+`pyproject.toml` declares test dependencies; `requirements-test.txt` locks the
+resolved versions and hashes. Home Assistant and its pytest plugin pins must
+be updated together, followed by a lock refresh. No Go toolchain is
 required. Read [AGENTS.md](../AGENTS.md) before changing protocol code.
 
 ```sh
 uv venv --python 3.14
-uv pip install '.[test]'
+uv pip install --require-hashes --only-binary=:all: -r requirements-build.txt
+uv pip install --require-hashes --only-binary=:all: \
+  --no-binary=aiortc,mock-open,pyric,pyturbojpeg,tuya-mobile \
+  --no-build-isolation -r requirements-test.txt
 .venv/bin/ruff check custom_components tests scripts
 .venv/bin/pytest -m 'not media'
 .venv/bin/python scripts/package_release.py
@@ -14,6 +19,26 @@ uv pip install '.[test]'
 node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout \
   --test-reporter=lcov --test-reporter-destination=coverage-js.lcov tests/test_release_gate.cjs
 ```
+
+The lock targets CPython 3.14 on Linux x86-64, matching CI. On other development
+platforms, install `.[test]` from `pyproject.toml` and retain the same direct pins.
+The five explicit source exceptions have no suitable wheels. Their archives are
+hash-locked; build isolation is disabled so builds use the hash-locked tools in
+`requirements-build.txt` instead of downloading additional build dependencies.
+The aiortc archive still uses the same pinned upstream commit as the integration.
+
+After changing dependencies, regenerate the locks, run `pip check`, and validate
+both the Python and synthetic-media suites in a fresh environment:
+
+```sh
+uv pip compile pyproject.toml --extra test --generate-hashes --python-version 3.14.8 \
+  --python-platform x86_64-unknown-linux-gnu --output-file requirements-test.txt --no-annotate
+printf 'setuptools>=77\nwheel\n' | uv pip compile - --generate-hashes \
+  --python-version 3.14.8 --output-file requirements-build.txt --no-annotate
+```
+
+A regression test checks that every declared test dependency matches the lock.
+Dependabot changes to direct pins must include the corresponding lock refresh.
 
 ## Protocol and media validation
 
@@ -50,3 +75,5 @@ real-camera results and limits; never retain private media or protocol payloads.
 ## SonarQube Cloud
 
 See [SonarQube Cloud and coverage](sonarqube.md) for CI analysis, coverage artifacts and external-contribution limits.
+The [quality review](quality-review.md) records the robustness changes and
+protocol-specific findings that require contextual security review.

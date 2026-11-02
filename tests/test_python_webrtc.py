@@ -90,7 +90,9 @@ async def test_h264_webrtc_forwards_original_rtp_and_closes_every_task(socket_en
         assert session.audio_codec == "PCMU/8000/1"
     finally:
         await session.close()
-    assert not session.tasks and session.peer is None and session.broker is None
+    assert not session.tasks
+    assert session.peer is None
+    assert session.broker is None
 
 
 async def test_hevc_datachannel_negotiates_and_preserves_pcm_byte_order(socket_enabled):
@@ -104,7 +106,8 @@ async def test_hevc_datachannel_negotiates_and_preserves_pcm_byte_order(socket_e
             while len(received) < 2:
                 await asyncio.sleep(.01)
         assert broker.commands == ["codec", "start", "complete"]
-        assert session.hevc and session.audio_codec == "L16/8000/1"
+        assert session.hevc
+        assert session.audio_codec == "L16/8000/1"
         assert received[0] == ("video", b"\x26\x01\x80", 1234, 1)
         assert received[1] == ("audio", b"\x02\x01\x04\x03", 1234, 1)
     finally:

@@ -143,7 +143,9 @@ async def test_lan_entities_follow_schema_and_ha_services_use_only_local_command
         assert entity_registry.async_get(motion.entity_id).disabled_by is (
             er.RegistryEntryDisabler.INTEGRATION if battery else None
         )
-        assert switch.state == "off" and select.state == "auto" and number.state == "7.0"
+        assert switch.state == "off"
+        assert select.state == "auto"
+        assert number.state == "7.0"
         assert select.attributes["options"] == ["auto", "off", "on"]
         await hass.services.async_call("switch", "turn_on", {"entity_id": switch.entity_id}, blocking=True)
         await hass.services.async_call("select", "select_option",

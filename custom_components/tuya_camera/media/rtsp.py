@@ -9,6 +9,9 @@ from collections.abc import Callable
 from contextlib import suppress
 from urllib.parse import urlsplit
 
+REQUEST_TIMEOUT = 65
+WRITE_TIMEOUT = 5
+
 
 def rtp(payload: bytes, sequence: int, timestamp: int, kind: str, marker: bool = False) -> bytes:
     return struct.pack("!BBHII", 0x80, (96 if kind == "video" else 97) | (0x80 if marker else 0),
@@ -167,104 +170,138 @@ class RtspServer:
         task = asyncio.current_task()
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
-        source = queue = sender = None
-        channels = {}
-        session = secrets.token_hex(12)
-        lock = asyncio.Lock()
-
-        async def response(cseq, status=200, headers=None, body=""):
-            values = {"CSeq": cseq, "Session": session, **(headers or {})}
-            if body:
-                values["Content-Length"] = str(len(body.encode()))
-            data = f"RTSP/1.0 {status} {'OK' if status == 200 else 'Unavailable'}\r\n"
-            data += "".join(f"{k}: {v}\r\n" for k, v in values.items()) + "\r\n" + body
-            async with lock:
-                writer.write(data.encode())
-                await writer.drain()
-
-        async def send_packets():
-            try:
-                while item := await queue.get():
-                    kind, packet = item
-                    if kind in channels:
-                        async with lock:
-                            writer.write(b"$" + struct.pack("!BH", channels[kind], len(packet)) + packet)
-                            await asyncio.wait_for(writer.drain(), 5)
-            finally:
-                writer.close()
-
         try:
-            if len(self.tasks) > 32:
-                return
-            while True:
-                first = await asyncio.wait_for(reader.readexactly(1), 65)
-                if first == b"$":
-                    frame = await reader.readexactly(3)
-                    await reader.readexactly(struct.unpack_from("!H", frame, 1)[0])
-                    continue
-                request = first + await reader.readuntil(b"\r\n\r\n")
-                lines = request.decode().split("\r\n")
-                method, url, _ = lines[0].split(" ", 2)
-                headers = {k.lower(): v.strip() for line in lines[1:] if ":" in line for k, v in [line.split(":", 1)]}
-                length = int(headers.get("content-length", 0))
-                if not 0 <= length <= 32768:
-                    break
-                if length:
-                    await reader.readexactly(length)
-                seq = headers.get("cseq", "0")
-                path = urlsplit(url).path.rstrip("/")
-                base_path = path.removesuffix("/video").removesuffix("/audio")
-                if method == "OPTIONS":
-                    await response(seq, headers={"Public": "OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN, GET_PARAMETER"})
-                elif method == "DESCRIBE":
-                    if source is not None or base_path not in self.sources:
-                        await response(seq, 404)
-                        break
-                    source = self.sources[base_path]
-                    acquisition = asyncio.create_task(source.acquire())
-                    try:
-                        while not acquisition.done():
-                            if reader.at_eof():
-                                raise ConnectionError("RTSP consumer disconnected")
-                            await asyncio.wait({acquisition}, timeout=.1)
-                        queue = await acquisition
-                    finally:
-                        if not acquisition.done():
-                            acquisition.cancel()
-                            await asyncio.gather(acquisition, return_exceptions=True)
-                    await response(seq, headers={"Content-Type": "application/sdp", "Content-Base": url.rstrip("/") + "/"},
-                                   body=source.sdp(url.rstrip("/")))
-                elif method == "SETUP" and source and base_path in self.sources and self.sources[base_path] is source:
-                    transport = headers.get("transport", "")
-                    if not transport.upper().startswith("RTP/AVP/TCP") or "interleaved=" not in transport:
-                        await response(seq, 461)
-                        break
-                    channel = int(transport.split("interleaved=", 1)[1].split("-", 1)[0])
-                    if not 0 <= channel < 255 or path.rsplit("/", 1)[-1] not in ("video", "audio"):
-                        break
-                    channels[path.rsplit("/", 1)[-1]] = channel
-                    await response(seq, headers={"Transport": f"RTP/AVP/TCP;unicast;interleaved={channel}-{channel + 1}"})
-                elif method == "PLAY" and source and channels and sender is None:
-                    await response(seq, headers={"Range": "npt=0.000-"})
-                    sender = asyncio.create_task(send_packets())
-                elif method == "GET_PARAMETER":
-                    await response(seq)
-                elif method == "TEARDOWN":
-                    await response(seq)
-                    break
-                else:
-                    await response(seq, 400)
-                    break
-        except (OSError, ValueError, TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
-            pass
+            if len(self.tasks) <= 32:
+                await RtspConnection(self.sources, reader, writer).run()
         finally:
-            writer.close()  # Close even if a second cancellation interrupts session cleanup.
-            if sender:
-                sender.cancel()
-                await asyncio.gather(sender, return_exceptions=True)
-            if source and queue is not None:
-                await source.release(queue)
             writer.close()
-            with suppress(OSError):
-                await writer.wait_closed()
+            with suppress(OSError, TimeoutError):
+                await asyncio.wait_for(writer.wait_closed(), WRITE_TIMEOUT)
             self.tasks.discard(task)
+
+
+class RtspConnection:
+    """Own one reader's negotiation, RTP sender and camera lease."""
+
+    def __init__(self, sources, reader, writer):
+        self.sources, self.reader, self.writer = sources, reader, writer
+        self.source = self.queue = self.sender = None
+        self.channels = {}
+        self.session = secrets.token_hex(12)
+        self.lock = asyncio.Lock()
+
+    async def response(self, cseq, status=200, headers=None, body=""):
+        values = {"CSeq": cseq, "Session": self.session, **(headers or {})}
+        if body:
+            values["Content-Length"] = str(len(body.encode()))
+        data = f"RTSP/1.0 {status} {'OK' if status == 200 else 'Unavailable'}\r\n"
+        data += "".join(f"{k}: {v}\r\n" for k, v in values.items()) + "\r\n" + body
+        async with self.lock:
+            self.writer.write(data.encode())
+            await asyncio.wait_for(self.writer.drain(), WRITE_TIMEOUT)
+
+    async def send_packets(self):
+        try:
+            while item := await self.queue.get():
+                kind, packet = item
+                if kind in self.channels:
+                    async with self.lock:
+                        self.writer.write(b"$" + struct.pack("!BH", self.channels[kind], len(packet)) + packet)
+                        await asyncio.wait_for(self.writer.drain(), WRITE_TIMEOUT)
+        finally:
+            self.writer.close()
+
+    async def read_request(self):
+        # Bound the whole request, including partial headers, bodies and RTCP.
+        async with asyncio.timeout(REQUEST_TIMEOUT):
+            first = await self.reader.readexactly(1)
+            if first == b"$":
+                frame = await self.reader.readexactly(3)
+                await self.reader.readexactly(struct.unpack_from("!H", frame, 1)[0])
+                return None
+            request = first + await self.reader.readuntil(b"\r\n\r\n")
+            lines = request.decode().split("\r\n")
+            method, url, _ = lines[0].split(" ", 2)
+            headers = {k.lower(): v.strip() for line in lines[1:] if ":" in line for k, v in [line.split(":", 1)]}
+            length = int(headers.get("content-length", 0))
+            if not 0 <= length <= 32768:
+                raise ValueError("Invalid RTSP content length")
+            if length:
+                await self.reader.readexactly(length)
+            return method, url, headers
+
+    async def describe(self, seq, url, base_path):
+        if self.source is not None or base_path not in self.sources:
+            await self.response(seq, 404)
+            return False
+        self.source = self.sources[base_path]
+        acquisition = asyncio.create_task(self.source.acquire())
+        try:
+            while not acquisition.done():
+                if self.reader.at_eof():
+                    raise ConnectionError("RTSP consumer disconnected")
+                await asyncio.wait({acquisition}, timeout=.1)
+            self.queue = await acquisition
+        finally:
+            if not acquisition.done():
+                acquisition.cancel()
+            await asyncio.gather(acquisition, return_exceptions=True)
+            # Cancellation can arrive just after acquire returns its lease.
+            if not acquisition.cancelled() and acquisition.exception() is None:
+                self.queue = acquisition.result()
+        await self.response(seq, headers={"Content-Type": "application/sdp", "Content-Base": url.rstrip("/") + "/"},
+                            body=self.source.sdp(url.rstrip("/")))
+        return True
+
+    async def setup(self, seq, path, headers):
+        transport = headers.get("transport", "")
+        if not transport.upper().startswith("RTP/AVP/TCP") or "interleaved=" not in transport:
+            await self.response(seq, 461)
+            return False
+        channel = int(transport.split("interleaved=", 1)[1].split("-", 1)[0])
+        kind = path.rsplit("/", 1)[-1]
+        if not 0 <= channel < 255 or kind not in ("video", "audio"):
+            return False
+        self.channels[kind] = channel
+        await self.response(seq, headers={"Transport": f"RTP/AVP/TCP;unicast;interleaved={channel}-{channel + 1}"})
+        return True
+
+    async def dispatch(self, method, url, headers):
+        seq = headers.get("cseq", "0")
+        path = urlsplit(url).path.rstrip("/")
+        base_path = path.removesuffix("/video").removesuffix("/audio")
+        if method == "OPTIONS":
+            await self.response(seq, headers={"Public": "OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN, GET_PARAMETER"})
+        elif method == "DESCRIBE":
+            return await self.describe(seq, url, base_path)
+        elif method == "SETUP" and self.source and self.sources.get(base_path) is self.source:
+            return await self.setup(seq, path, headers)
+        elif method == "PLAY" and self.source and self.channels and self.sender is None:
+            await self.response(seq, headers={"Range": "npt=0.000-"})
+            self.sender = asyncio.create_task(self.send_packets())
+        elif method == "GET_PARAMETER":
+            await self.response(seq)
+        elif method == "TEARDOWN":
+            await self.response(seq)
+            return False
+        else:
+            await self.response(seq, 400)
+            return False
+        return True
+
+    async def run(self):
+        try:
+            while True:
+                request = await self.read_request()
+                if request is not None and not await self.dispatch(*request):
+                    break
+        except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+            # Malformed, disconnected or stalled consumers end their own lease.
+            return
+        finally:
+            self.writer.close()
+            if self.sender:
+                self.sender.cancel()
+                await asyncio.gather(self.sender, return_exceptions=True)
+            if self.source and self.queue is not None:
+                await self.source.release(self.queue)

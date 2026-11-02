@@ -37,5 +37,5 @@ include = ["custom_components*"]
 [tool.coverage.run]
 branch = true
 relative_files = true
-source = ["custom_components/tuya_camera"]
+source = ["custom_components/tuya_camera", "scripts"]
 omit = ["custom_components/tuya_camera/vendor/*"]

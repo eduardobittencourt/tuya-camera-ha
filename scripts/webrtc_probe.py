@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from urllib.parse import urlsplit
 
 import aiohttp
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCRtpReceiver, RTCSessionDescription
 
 
 async def run(endpoint):
+    url = urlsplit(endpoint)
+    if (url.scheme != "http" or url.hostname != "127.0.0.1" or not url.port
+            or url.username is not None or url.password is not None or url.fragment):
+        raise ValueError("The synthetic WebRTC endpoint must use HTTP on IPv4 loopback")
     peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))
     seen = set()
     ready = asyncio.Event()
@@ -30,8 +35,11 @@ async def run(endpoint):
         await peer.setLocalDescription(await peer.createOffer())
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=35)) as session, session.post(
             endpoint, data=peer.localDescription.sdp, headers={"Content-Type": "application/sdp"},
+            allow_redirects=False,
         ) as response:
             response.raise_for_status()
+            if 300 <= response.status < 400:
+                raise ValueError("The synthetic WebRTC endpoint returned a redirect")
             await peer.setRemoteDescription(RTCSessionDescription(sdp=await response.text(), type="answer"))
         await asyncio.wait_for(ready.wait(), 25)
         print("Received H.264 video and Opus audio via WebRTC")

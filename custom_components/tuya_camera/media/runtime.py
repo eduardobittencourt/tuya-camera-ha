@@ -78,7 +78,7 @@ class MediaRuntime:
                     session = LanSession(camera, self.data["uid"], packet)
                     try:
                         await session.connect()
-                    except (OSError, TimeoutError):
+                    except OSError:
                         await session.close()
                         self.state(cid, "waking_cloud")
                         self.state(cid, "wake_mqtt")
@@ -90,7 +90,7 @@ class MediaRuntime:
                             try:
                                 await session.connect()
                                 break
-                            except (OSError, TimeoutError):
+                            except OSError:
                                 await session.close()
                                 if time.monotonic() >= end:
                                     self.state(cid, "wake_media")
