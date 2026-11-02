@@ -21,7 +21,7 @@ dependency resolution. The hash-locked diff changes only those three packages.
 Build-tool pins, integration runtime requirements and the aiortc source commit
 remain unchanged. No resolver override or ignored dependency conflict is used.
 
-Validation uses a fresh environment installed from both hash-locked requirement
+Manual validation on 2026-11-02 used a fresh environment installed from both hash-locked requirement
 files, `uv pip check`, Ruff, the Python suite, real synthetic media, the release
 gate and generated HACS package checks. Synthetic peers do not test physical
 devices. Changing this development environment does not update the user's HA.
