@@ -82,12 +82,18 @@ def check_repository() -> dict:
 
 
 def check_archive(path: Path, manifest: dict) -> None:
+    """Inspect an operator-selected ZIP without extracting or trusting its sizes."""
     expected = {
         p.relative_to(COMPONENT).as_posix(): p
         for p in COMPONENT.rglob("*")
         if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
     }
     expected.update({name: ROOT / name for name in ("LICENSE", "NOTICE")})
+    contents = {name: source.read_bytes() for name, source in expected.items()}
+    # Release ZIPs need only file data and bounded central-directory metadata.
+    maximum_size = sum(map(len, contents.values())) + 65536 + 2048 * len(contents)
+    require(path.is_file(), "Archive must be a regular file")
+    require(path.stat().st_size <= maximum_size, "Archive exceeds the release size limit")
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         require(len(names) == len(set(names)), "Archive has duplicate entries")
@@ -96,11 +102,19 @@ def check_archive(path: Path, manifest: dict) -> None:
             require(not member.is_absolute() and ".." not in member.parts and "\\" not in name,
                     f"Unsafe archive path: {name}")
         require(set(names) == set(expected), "Archive files differ from the reviewed integration")
-        for name, source in expected.items():
-            require(archive.read(name) == source.read_bytes(), f"Archive content differs: {name}")
-        require(json.loads(archive.read(MANIFEST_NAME)) == manifest, "Archive manifest differs")
-    sums = f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
-    require((path.parent / "SHA256SUMS").read_text() == sums, "Published archive checksum differs")
+        for name, content in contents.items():
+            require(archive.getinfo(name).file_size == len(content), f"Archive member size differs: {name}")
+            with archive.open(name) as member:
+                require(member.read(len(content) + 1) == content, f"Archive content differs: {name}")
+        require(json.loads(contents[MANIFEST_NAME]) == manifest, "Archive manifest differs")
+    with path.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    sums = f"{digest}  {path.name}\n"
+    checksum = path.parent / "SHA256SUMS"
+    require(checksum.is_file(), "Published archive checksum must be a regular file")
+    expected_sum = sums.encode("utf-8")
+    with checksum.open("rb") as stream:
+        require(stream.read(len(expected_sum) + 1) == expected_sum, "Published archive checksum differs")
 
 
 def main() -> None:

@@ -66,7 +66,7 @@ async def inspect_webrtc(relay, ffmpeg, tmp_path):
                 except OSError:
                     await asyncio.sleep(.05)
         probe = await asyncio.create_subprocess_exec(
-            receiver, f"http://127.0.0.1:{api_port}/api/webrtc?src=camera",
+            receiver, str(api_port),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, start_new_session=True,
         )
         async with asyncio.timeout(60):

@@ -1,9 +1,10 @@
 """Keep public validation tooling inside its intended trust boundaries."""
+import asyncio
 import hashlib
 import json
 import tomllib
 import zipfile
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiohttp import web
@@ -38,7 +39,8 @@ def test_public_repository_and_generated_package(tmp_path):
     check_repository.check_archive(tmp_path / "tuya_camera.zip", manifest)
 
 
-@pytest.mark.parametrize("endpoint", [
+@pytest.mark.parametrize("port", [
+    0, -1, 65536, True, "1984",
     "http://192.168.0.2:1984/api/webrtc",
     "http://169.254.169.254:80/latest/meta-data",
     "http://localhost:1984/api/webrtc",
@@ -47,13 +49,15 @@ def test_public_repository_and_generated_package(tmp_path):
     "http://user:password@127.0.0.1:1984/api/webrtc",
     "http://127.0.0.1:1984/api/webrtc#fragment",
 ])
-async def test_synthetic_probe_rejects_external_endpoints_before_creating_peer(endpoint):
+async def test_synthetic_probe_rejects_invalid_ports_before_creating_peer(port):
+    """Invalid input must not allocate a peer or reach the network."""
     with patch.object(webrtc_probe, "RTCPeerConnection") as peer, pytest.raises(ValueError):
-        await webrtc_probe.run(endpoint)
+        await webrtc_probe.run(port)
     peer.assert_not_called()
 
 
 async def test_synthetic_probe_does_not_follow_redirects(aiohttp_server, socket_enabled):
+    """A local response cannot redirect the SDP offer to another destination."""
     followed = []
 
     async def redirect(_request):
@@ -64,13 +68,74 @@ async def test_synthetic_probe_does_not_follow_redirects(aiohttp_server, socket_
         return web.Response(text="must not be contacted")
 
     app = web.Application()
-    app.router.add_post("/redirect", redirect)
+    app.router.add_post("/api/webrtc", redirect)
     app.router.add_get("/unexpected", unexpected)
     server = await aiohttp_server(app, host="127.0.0.1")
-    endpoint = str(server.make_url("/redirect"))
     with pytest.raises(ValueError, match="redirect"):
-        await webrtc_probe.run(endpoint)
+        await webrtc_probe.run(server.port)
     assert not followed
+
+
+def synthetic_answer(host, related=""):
+    """Build a minimal answer exposing only the candidate trust boundary."""
+    return ("v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+            "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n"
+            f"a=candidate:1 1 UDP 2130706431 {host} 12345 typ host{related}\r\n")
+
+
+@pytest.mark.parametrize("host,related", [
+    ("192.168.0.2", ""), ("169.254.169.254", ""), ("example.local", ""), ("::1", ""),
+    ("127.0.0.1", " raddr 192.168.0.2 rport 12345"),
+])
+async def test_probe_rejects_remote_ice_before_setting_answer(host, related, aiohttp_server, socket_enabled):
+    """A local HTTP server must not cause external ICE checks or mDNS lookup."""
+    async def answer(request):
+        assert request.query == {"src": "camera"}
+        return web.Response(text=synthetic_answer(host, related))
+
+    app = web.Application()
+    app.router.add_post("/api/webrtc", answer)
+    server = await aiohttp_server(app, host="127.0.0.1")
+    with patch.object(webrtc_probe.RTCPeerConnection, "setRemoteDescription", new_callable=AsyncMock) as remote, \
+         pytest.raises(ValueError, match="loopback ICE"):
+        await webrtc_probe.run(server.port)
+    remote.assert_not_awaited()
+
+
+async def test_probe_bounds_answer_size(aiohttp_server, socket_enabled, monkeypatch):
+    """An oversized answer is rejected before SDP parsing or peer negotiation."""
+    monkeypatch.setattr(webrtc_probe, "MAX_ANSWER_SIZE", 100)
+
+    async def answer(_request):
+        return web.Response(body=b"x" * 101)
+
+    app = web.Application()
+    app.router.add_post("/api/webrtc", answer)
+    server = await aiohttp_server(app, host="127.0.0.1")
+    with pytest.raises(ValueError, match="size limit"):
+        await webrtc_probe.run(server.port)
+
+
+async def test_probe_reads_fragmented_answer_to_eof(aiohttp_server, socket_enabled):
+    """A legitimate local answer remains intact when split across HTTP chunks."""
+    sdp = synthetic_answer("127.0.0.1")
+
+    async def answer(request):
+        response = web.StreamResponse()
+        await response.prepare(request)
+        await response.write(sdp[:20].encode())
+        await asyncio.sleep(.01)
+        await response.write(sdp[20:].encode())
+        return response
+
+    app = web.Application()
+    app.router.add_post("/api/webrtc", answer)
+    server = await aiohttp_server(app, host="127.0.0.1")
+    with patch.object(webrtc_probe.RTCPeerConnection, "setRemoteDescription", new_callable=AsyncMock,
+                      side_effect=ValueError("answer received")) as remote, \
+         pytest.raises(ValueError, match="answer received"):
+        await webrtc_probe.run(server.port)
+    remote.assert_awaited_once_with(webrtc_probe.RTCSessionDescription(sdp=sdp, type="answer"))
 
 
 @pytest.mark.parametrize("member", ["../outside", "/absolute", "directory/../../outside", "directory\\outside"])
@@ -87,6 +152,7 @@ def test_archive_rejects_unsafe_members_without_extracting_files(tmp_path, monke
 
 
 def test_archive_verifies_exact_files_and_checksum(tmp_path, monkeypatch):
+    """Reject changed bytes even when filenames and uncompressed sizes match."""
     component = tmp_path / "component"
     component.mkdir()
     manifest = {"version": "0.4.0"}
@@ -105,6 +171,36 @@ def test_archive_verifies_exact_files_and_checksum(tmp_path, monkeypatch):
     checksum.write_text("incorrect\n")
     with pytest.raises(SystemExit, match="checksum differs"):
         check_repository.check_archive(archive, manifest)
-    (component / "manifest.json").write_text("{}")
+    (component / "manifest.json").write_text(json.dumps({"version": "0.4.1"}))
     with pytest.raises(SystemExit, match="content differs"):
         check_repository.check_archive(archive, manifest)
+
+
+def test_archive_rejects_compressed_bomb_before_reading_members(tmp_path, monkeypatch):
+    """A tiny ZIP with the exact filenames cannot expand beyond reviewed sizes."""
+    component = tmp_path / "component"
+    component.mkdir()
+    (component / "manifest.json").write_text("{}")
+    for name in ("LICENSE", "NOTICE"):
+        (tmp_path / name).write_text(name)
+    monkeypatch.setattr(check_repository, "ROOT", tmp_path)
+    monkeypatch.setattr(check_repository, "COMPONENT", component)
+    archive = tmp_path / "candidate.zip"
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as candidate:
+        candidate.writestr("manifest.json", b"x" * 1_000_000)
+        for name in ("LICENSE", "NOTICE"):
+            candidate.write(tmp_path / name, name)
+    assert archive.stat().st_size < 4096
+    with pytest.raises(SystemExit, match="member size differs"):
+        check_repository.check_archive(archive, {})
+
+
+def test_archive_rejects_oversized_container_before_zip_parsing(tmp_path, monkeypatch):
+    """Reject excessive ZIP metadata or padding before the directory is loaded."""
+    component = tmp_path / "component"
+    component.mkdir()
+    monkeypatch.setattr(check_repository, "COMPONENT", component)
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"x" * 2_000_000)
+    with pytest.raises(SystemExit, match="release size limit"):
+        check_repository.check_archive(archive, {})
