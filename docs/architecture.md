@@ -40,6 +40,26 @@ media window or shutdown prevents a late refresh. The operation-order regression
 in [test_lan_connect.py](../tests/test_lan_connect.py) complement the encrypted
 TCP and shared-media tests; entity observations and revision behavior are retained.
 
+Sonar's PR analysis reports 96.4% coverage on new code and no new issues. For
+`lan.py` as a whole, cognitive complexity is 189 against main's 209; cyclomatic
+complexity is 190 against 185, with five additional functions. These are file
+metrics for this PR, not a measurement of a merged main branch.
+
+Physical regression testing of runtime commit `820f860` on one battery camera
+with the existing HA 2026.11.0b2 passed: a fresh JPEG after startup (8.9 s),
+62.1 s of decoded H.264/AAC, three controls confirmed and restored during video,
+entry reload followed by a JPEG (3.0 s), and standby with no media processes.
+Account and all 19 entity bindings were preserved. The official 0.4.0 integration
+was restored with all 44 file hashes checked; its snapshot and standby passed,
+and all three temporarily suspended startup automations were re-enabled.
+The announced window ended on 2026-11-02 at 01:57:35 BRT. An initial test-client
+readiness timeout occurred before camera testing; official restoration passed
+before repeating with bounded REST checks and a fresh WebSocket. This physical
+case validates shared battery media; synthetic tests cover the separate TinyTuya
+connection branches and do not establish additional retail-model compatibility.
+Two old-stream errors (I/O and connection refused) occurred during the intentional
+entry reload; the subsequent capture and cleanup passed.
+
 A sleeping camera may still require Tuya MQTT wake, with WebRTC wake as fallback.
 A LAN negotiation/authentication failure never silently switches playback to
 cloud video. Removing Go does not establish fully offline operation; see

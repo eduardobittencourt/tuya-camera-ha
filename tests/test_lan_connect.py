@@ -102,6 +102,7 @@ async def test_version_fallback_closes_previous_socket_before_opening_another(ha
     local = lan.LocalCamera(hass, "entry", CAMERA)
 
     def construct(*_args, **kwargs):
+        """Choose a scripted socket and record each attempted protocol version."""
         events.append(("open", kwargs["version"]))
         return first if kwargs["version"] == 3.3 else second
 
@@ -139,6 +140,7 @@ async def test_battery_status_wait_stops_at_deadline_without_real_sleep(hass, mo
     device = ScriptedDevice(events, {"Err": "914"})
 
     def receive():
+        """Advance beyond the status deadline when no report arrives."""
         clock[0] = 9.0
         events.append(("device", "receive"))
         return None
@@ -166,6 +168,7 @@ async def test_battery_startup_drain_aborts_before_refresh_when_window_closes(ha
     local.media_activity(True)
 
     def receive():
+        """Close the startup window while delivering an empty report."""
         events.append(("device", "receive"))
         if stopping:
             local._stopping.set()
