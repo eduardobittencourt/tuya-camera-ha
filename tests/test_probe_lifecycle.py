@@ -44,6 +44,7 @@ async def test_probe_guard_survives_negotiation_and_cleanup(failure, aiohttp_ser
     remote = webrtc_probe.ProbePeer(webrtc_probe.RTCConfiguration(iceServers=[]))
     applied = asyncio.Event()
     transports = set()
+    negotiations = set()
     original = peer.setRemoteDescription
 
     async def answer(request):
@@ -57,6 +58,7 @@ async def test_probe_guard_survives_negotiation_and_cleanup(failure, aiohttp_ser
 
     async def apply(description):
         await original(description)
+        negotiations.update(peer._negotiations)
         transports.update(guarded_transports(peer))
         for transport in guarded_transports(peer):
             reject_external_stun(transport._connection)
@@ -84,6 +86,8 @@ async def test_probe_guard_survives_negotiation_and_cleanup(failure, aiohttp_ser
             await asyncio.gather(task, return_exceptions=True)
             await remote.close()
     assert peer.connectionState == "closed"
+    assert negotiations
+    assert all(task.done() for task in negotiations)
     assert not peer._negotiations
     assert not remote._negotiations
     assert all(transport.state == "closed" for transport in transports)
