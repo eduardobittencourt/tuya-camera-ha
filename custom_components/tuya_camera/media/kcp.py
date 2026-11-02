@@ -70,31 +70,37 @@ class KCP:
             parts.append((cmd, frg, wnd, ts, sn, una, packet[24:24 + size]))
             packet = packet[24 + size:]
         for cmd, frg, wnd, ts, sn, una, data in parts:
-            self.remote_window = wnd
-            for sent in list(self.sending):
-                if diff(sent, una) < 0:
-                    del self.sending[sent]
-            if cmd == 82:
-                segment = self.sending.pop(sn, None)
-                if segment is not None:
-                    rtt = diff(now, ts)
-                    if rtt >= 0:
-                        if not self.srtt:
-                            self.srtt, self.rttvar = rtt, rtt // 2
-                        else:
-                            self.rttvar = (3 * self.rttvar + abs(rtt - self.srtt)) // 4
-                            self.srtt = (7 * self.srtt + rtt) // 8
-                        self.rto = max(30, min(60000, self.srtt + max(10, 4 * self.rttvar)))
-                    for earlier, item in self.sending.items():
-                        if diff(earlier, sn) < 0:
-                            item.fastacks += 1
-            elif cmd == 83:
-                self.output(self._packet(84))
-            elif cmd == 81 and diff(sn, self.next_receive + WINDOW) < 0:
-                self.output(self._packet(82, sn, ts))
-                if diff(sn, self.next_receive) >= 0:
-                    self.pending.setdefault(sn, (frg, data))
-                self._deliver()
+            self._input_segment(cmd, frg, wnd, ts, sn, una, data, now)
+
+    def _input_segment(self, cmd, fragment, window, timestamp, sequence, unacked, data, now):
+        self.remote_window = window
+        for sent in tuple(self.sending):
+            if diff(sent, unacked) < 0:
+                del self.sending[sent]
+        if cmd == 82:
+            self._acknowledge(sequence, timestamp, now)
+        elif cmd == 83:
+            self.output(self._packet(84))
+        elif cmd == 81 and diff(sequence, self.next_receive + WINDOW) < 0:
+            self.output(self._packet(82, sequence, timestamp))
+            if diff(sequence, self.next_receive) >= 0:
+                self.pending.setdefault(sequence, (fragment, data))
+            self._deliver()
+
+    def _acknowledge(self, sequence: int, timestamp: int, now: int) -> None:
+        if self.sending.pop(sequence, None) is None:
+            return
+        rtt = diff(now, timestamp)
+        if rtt >= 0:
+            if not self.srtt:
+                self.srtt, self.rttvar = rtt, rtt // 2
+            else:
+                self.rttvar = (3 * self.rttvar + abs(rtt - self.srtt)) // 4
+                self.srtt = (7 * self.srtt + rtt) // 8
+            self.rto = max(30, min(60000, self.srtt + max(10, 4 * self.rttvar)))
+        for earlier, item in self.sending.items():
+            if diff(earlier, sequence) < 0:
+                item.fastacks += 1
 
     def _deliver(self) -> None:
         while self.next_receive in self.pending:

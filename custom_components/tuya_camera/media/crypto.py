@@ -42,6 +42,8 @@ def pack_signal(key: bytes, seq: int, cmd: int, payload: dict | None = None) -> 
 
 
 def unpack_signal(key: bytes, frame: bytes) -> tuple[int, dict]:
+    if len(frame) < 24:
+        raise ValueError("Short LAN frame")
     prefix, _, cmd, length = struct.unpack_from("!IIII", frame)
     if prefix != 0x55AA or not 8 <= length <= 1024 * 1024 or len(frame) != 16 + length:
         raise ValueError("Invalid LAN frame")
@@ -58,7 +60,7 @@ def unpack_signal(key: bytes, frame: bytes) -> tuple[int, dict]:
     plain = decrypt(key, body)
     try:
         value = json.loads(plain)
-    except (ValueError, UnicodeError):
+    except ValueError:
         return cmd, {}  # IPC acknowledgements may carry opaque binary data.
     return cmd, value if isinstance(value, dict) else {}
 

@@ -106,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except MediaAuthenticationError as err:
         await runtime.stop()
         raise ConfigEntryAuthFailed("The Tuya session expired; sign in again") from err
-    except (MediaError, OSError, TimeoutError) as err:
+    except (MediaError, OSError) as err:
         await runtime.stop()
         raise ConfigEntryNotReady("The camera media service could not start") from err
     except BaseException:

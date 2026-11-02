@@ -399,7 +399,8 @@ class LocalCamera:
             if not self.connected:
                 # Re-evaluate the LAN address after DHCP changes, without cloud discovery.
                 self.config = {key: value for key, value in self.config.items() if key not in ("host", "version")}
-            await self._pause(0.05 if self.connected else (1 if self.on_demand or self.media_client else 30))
+            pause = 1 if self.on_demand or self.media_client else 30
+            await self._pause(0.05 if self.connected else pause)
 
     async def _wake_for_command(self) -> None:
         try:
@@ -469,10 +470,7 @@ class LocalCamera:
 
     async def _release_command_media(self) -> None:
         # Sequential HA service calls can reuse the same media/LAN negotiation.
-        try:
-            await asyncio.sleep(2)
-        except asyncio.CancelledError:
-            return
+        await asyncio.sleep(2)
         self._command_release_task = None
         task, self._command_media_task = self._command_media_task, None
         if task is not None:

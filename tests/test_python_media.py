@@ -151,7 +151,8 @@ async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(tmp_path, mon
     await relay.start()
     try:
         jpeg = await relay.snapshot()
-        assert jpeg and jpeg.startswith(b"\xff\xd8")
+        assert jpeg
+        assert jpeg.startswith(b"\xff\xd8")
         with av.open(io.BytesIO(jpeg)) as picture:
             frame = next(picture.decode(video=0))
             assert (frame.width, frame.height) == (320, 240)
@@ -167,7 +168,8 @@ async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(tmp_path, mon
             async with asyncio.timeout(3):
                 while session.values.get("1") is not False:
                     await asyncio.sleep(.01)
-            assert session.stats["Video"] > 5 and session.stats["Audio"] > 5
+            assert session.stats["Video"] > 5
+            assert session.stats["Audio"] > 5
         finally:
             control.cancel()
             await asyncio.gather(control, return_exceptions=True)
@@ -178,4 +180,5 @@ async def test_synthetic_lan_camera_through_python_rtsp_and_ffmpeg(tmp_path, mon
         await signaling.wait_closed()
         transport.close()
     assert all(not s.tasks and s.writer is None and s.transport is None for s in sessions)
-    assert not server.tasks and source.session is None
+    assert not server.tasks
+    assert source.session is None

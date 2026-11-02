@@ -79,7 +79,8 @@ async def test_stop_aborts_a_consumer_that_does_not_read(tmp_path, socket_enable
     processes = tuple(relay._processes)
     async with asyncio.timeout(15):
         await relay.stop()
-    assert processes and all(process.returncode is not None for process in processes)
+    assert processes
+    assert all(process.returncode is not None for process in processes)
     assert not relay._tasks
     writer.transport.abort()
 
@@ -106,4 +107,28 @@ async def test_unload_pending_media_balances_activity_and_reaps_process(control)
     assert processes[0].returncode is not None
     assert activity == ([] if control else [True, False])
     assert relay.active_processes == 0
+    assert not relay._tasks
+
+
+async def test_excess_http_consumers_are_rejected_without_starting_ffmpeg(socket_enabled, monkeypatch):
+    monkeypatch.setattr("custom_components.tuya_camera.transcoder.MAX_CLIENTS", 1)
+    relay = FfmpegRelay("unused", lambda: "unused", lambda: False)
+    await relay.start()
+    parsed = urlsplit(relay.url)
+    _first_reader, first_writer = await asyncio.open_connection(parsed.hostname, parsed.port)
+    try:
+        # Keep the first connection in header parsing so it owns the only slot.
+        first_writer.write(b"G")
+        await first_writer.drain()
+        reader, writer = await asyncio.open_connection(parsed.hostname, parsed.port)
+        try:
+            assert (await asyncio.wait_for(reader.read(), 1)).startswith(b"HTTP/1.1 503")
+            assert relay.active_processes == 0
+        finally:
+            writer.close()
+            await writer.wait_closed()
+    finally:
+        first_writer.close()
+        await first_writer.wait_closed()
+        await relay.stop()
     assert not relay._tasks

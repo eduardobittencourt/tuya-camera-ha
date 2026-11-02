@@ -233,8 +233,9 @@ class LanSession(asyncio.DatagramProtocol):
                 size = 24 + struct.unpack_from("<I", body, 20)[0]
                 if size > len(body):
                     raise ValueError("Invalid KCP batch length")
+                channel = self._channel(conv)
                 self.peers[conv] = addr
-                self._channel(conv).input(body[:size], int(time.monotonic() * 1000) & 0xFFFFFFFF)
+                channel.input(body[:size], int(time.monotonic() * 1000) & 0xFFFFFFFF)
                 body = body[size:]
         except (ValueError, BufferError, struct.error):
             self.stats["Malformed"] += 1

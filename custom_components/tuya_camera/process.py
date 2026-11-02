@@ -21,7 +21,8 @@ async def stop_process(process: asyncio.subprocess.Process) -> None:
             # An existing monitor/communicate task may already own this reader.
             with suppress(RuntimeError):
                 while await stream.read(65536):
-                    pass
+                    # Drain pipe output so process.wait() can reap the child.
+                    continue
 
     drains = [asyncio.create_task(drain(stream)) for stream in (process.stdout, process.stderr)]
     try:
