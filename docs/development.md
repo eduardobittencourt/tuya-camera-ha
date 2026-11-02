@@ -6,6 +6,12 @@ resolved versions and hashes. Home Assistant and its pytest plugin pins must
 be updated together, followed by a lock refresh. No Go toolchain is
 required. Read [AGENTS.md](../AGENTS.md) before changing protocol code.
 
+The validation pair is Home Assistant 2026.10.4 with
+`pytest-homeassistant-custom-component` 0.13.375. Its dependency resolution
+selects uv 0.13.5, including the fix for GHSA-hq85-5cpj-mr62. See the
+[dependency security review](test-dependency-security.md) for the remaining
+Pillow constraint and the distinction between test and integration dependencies.
+
 ```sh
 uv venv --python 3.14
 uv pip install --require-hashes --only-binary=:all: -r requirements-build.txt
