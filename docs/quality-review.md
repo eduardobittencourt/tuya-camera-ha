@@ -55,11 +55,12 @@ use every argument. Preserve the interface contract when reviewing those
 findings. Further complexity findings remain candidates for focused changes
 with targeted regression coverage, especially battery-camera startup and wake.
 
-`check_archive` reads an operator-selected archive and never extracts it. It
-validates member paths, the exact allowed member set, file contents and the
-published checksum. Its CLI path argument is an intended local file selection;
-path-traversal analysis must distinguish that from writing archive members.
-Regression tests cover traversal names and mismatched contents/checksums.
+`check_archive` never extracts an archive. The subsequent
+[security-boundary review](security-boundaries.md) restricts its input to the
+repository's `dist/tuya_camera.zip`, rejects escaping symlinks and bounds archive,
+member and checksum reads. It also validates member paths, the exact allowed
+member set, file contents and the published checksum. Regression tests cover
+outside inputs, traversal names and mismatched contents/checksums.
 
 GitHub also reported open Go findings whose paths belong to the removed bridge.
 Keep those separate from current Python findings and verify the analysis commit

@@ -6,6 +6,12 @@ resolved versions and hashes. Home Assistant and its pytest plugin pins must
 be updated together, followed by a lock refresh. No Go toolchain is
 required. Read [AGENTS.md](../AGENTS.md) before changing protocol code.
 
+The validation pair is Home Assistant 2026.10.4 with
+`pytest-homeassistant-custom-component` 0.13.375. Its dependency resolution
+selects uv 0.13.5, including the fix for GHSA-hq85-5cpj-mr62. See the
+[dependency security review](test-dependency-security.md) for the remaining
+Pillow constraint and the distinction between test and integration dependencies.
+
 ```sh
 uv venv --python 3.14
 uv pip install --require-hashes --only-binary=:all: -r requirements-build.txt
@@ -66,6 +72,17 @@ Activate `.venv` when using the executable probe so its Python dependencies
 are found. Research/tools belong under `~/research/tuya-camera-ha/`, outside
 release payloads. The [CI workflow](../.github/workflows/ci.yml) defines tool
 versions and downloads. Its checksum-pinned FFmpeg wheel is test tooling only.
+
+The synthetic WebRTC probe takes the go2rtc API **port**, not a URL:
+`scripts/webrtc_probe.py 1984`. It always posts to
+`http://127.0.0.1:PORT/api/webrtc?src=camera`, rejects redirects and checks the
+answer's ICE candidates before giving them to aiortc. The test harness provides
+the port of its own synthetic server. See [security boundaries](security-boundaries.md)
+for the archive limits, probe restrictions and protocol-hash review.
+The release checker accepts only this repository's `dist/tuya_camera.zip` and
+rejects symlinks escaping the release directory. Generate the default archive
+before checking it; a custom `package_release.py --output` directory is not an
+alternative input directory for the checker.
 
 Before publishing, run a clean dependency resolution for the declared test
 extra, the complete suite, Ruff, archive checks, secret scanning, HACS and
