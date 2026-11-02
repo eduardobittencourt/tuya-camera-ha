@@ -28,6 +28,18 @@ calls; no HTTP control IPC or second signaling socket is used. Other device
 profiles retain the TinyTuya control path. Periodic DP refreshes remain disabled
 on the shared socket because they interrupted the tested camera's video.
 
+The LAN control connection separates shared-media attachment, private endpoint
+discovery, bounded protocol/status negotiation and battery startup initialization.
+The shared-media path returns before discovery or TinyTuya socket construction.
+For other profiles, a failed candidate is closed before another version is
+opened; offline responses 901/905 stop version fallback. Battery status may arrive
+as a pushed report within its existing eight-second window. Up to three initial
+reports are drained before one readable-scalar refresh is sent without waiting
+for its acknowledgement. Readiness follows that initialization, and a closed
+media window or shutdown prevents a late refresh. The operation-order regressions
+in [test_lan_connect.py](../tests/test_lan_connect.py) complement the encrypted
+TCP and shared-media tests; entity observations and revision behavior are retained.
+
 A sleeping camera may still require Tuya MQTT wake, with WebRTC wake as fallback.
 A LAN negotiation/authentication failure never silently switches playback to
 cloud video. Removing Go does not establish fully offline operation; see
