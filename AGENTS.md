@@ -1,7 +1,7 @@
 # Contributor guidance
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md) and
-[docs/development.md](docs/development.md) for development and validation commands.
+[Development and testing](docs/development/testing.md) for development and validation commands.
 Use English for public code comments, documentation and review feedback.
 
 - The product is the UI-configured Home Assistant integration in
@@ -28,6 +28,27 @@ Use English for public code comments, documentation and review feedback.
   aiortc raw RTP adapter require synthetic H.264 and H.265/datachannel peer tests.
   Keep physical-device verification distinct from synthetic test results.
 
-See [SonarQube Cloud and coverage](docs/sonarqube.md) for CI coverage reporting
+See [SonarQube Cloud and coverage](docs/development/ci.md) for CI coverage reporting
 and review configuration. Fix underlying failures without weakening assertions
 or bypassing CI requirements.
+
+## Documentation maintenance
+
+- Keep the root README focused on public Home Assistant use: features,
+  requirements, installation, configuration, compatibility limits, support,
+  contribution links and licensing. Use the existing brand icon and shared
+  section order; preserve each project's actual capabilities and HACS route.
+- Keep release announcements and version-specific implementation history in
+  CHANGELOG.md. Keep supported upgrade procedures in docs/guides/. Report
+  test results in PRs or release notes; do not keep investigation diaries,
+  decompilation procedures, local lab setups or obsolete plans in docs/.
+  Minimum supported HA versions and current limits belong in the README.
+- Use the common docs/ layout: guides/ for users, reference/ for current
+  architecture, security and branding, and development/ for testing, CI and
+  releases. Use docs/README.md as the documentation map. Link to the authoritative guide
+  rather than duplicating detailed configuration or developer commands.
+- Keep AGENTS.md limited to contributor navigation and implementation guardrails.
+  Keep local deployment notes, credentials, raw captures and work-session
+  diaries out of public documentation.
+- Update incoming links when moving material. Preserve required attribution
+  and distinguish physical-device evidence from synthetic tests.

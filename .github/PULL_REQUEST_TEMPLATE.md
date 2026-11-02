@@ -9,4 +9,4 @@ public model, firmware and features tested; distinguish real and synthetic media
 
 - [ ] No credentials, identifiers, private media or runtime data are included.
 - [ ] Documentation and compatibility notes reflect the change, where applicable.
-- [ ] Managed bridge changes update both Python/Go contract tests and binary checksums.
+- [ ] Protocol/media tooling changes pass the relevant synthetic peer/media and archive checks (or are not applicable).
