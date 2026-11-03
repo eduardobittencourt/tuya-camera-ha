@@ -21,3 +21,10 @@ Dependabot's auto-merge workflow enables squash auto-merge without checking out
 PR code. It does not bypass checks, resolve findings or publish releases.
 Repository settings are authoritative for required checks and reviews.
 The [release gate](releasing.md) checks the intended release commit.
+
+The required Sonar status check is `SonarQube scan`, provided by GitHub Actions
+(app ID `15368`). The scanner runs with `sonar.qualitygate.wait=true`, so this
+job fails if analysis fails or the quality gate is rejected. Keep the required
+check name aligned with the workflow job; the separate SonarCloud GitHub App
+check, `SonarCloud Code Analysis`, is not required by this CI setup. Fork PRs
+continue to run without scanner credentials.
