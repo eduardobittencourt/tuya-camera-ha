@@ -47,10 +47,10 @@ class LoopbackConnection(Connection):
         """Ignore interface enumeration for this local synthetic test process."""
         return await super().get_component_candidates(component, ["127.0.0.1"], timeout)
 
-    def request_received(self, message, addr, protocol, raw_data):
+    def request_received(self, message, addr, protocol):
         """Drop external sources before authentication, replies or learned checks."""
         if addr[0] == "127.0.0.1":
-            super().request_received(message, addr, protocol, raw_data)
+            super().request_received(message, addr, protocol)
 
 
 def add_receivers(peer):
