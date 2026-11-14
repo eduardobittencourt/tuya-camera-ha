@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry, mock_restore_cache_with_extra_data
+from pytest_homeassistant.common import MockConfigEntry, mock_restore_cache_with_extra_data
 
 from custom_components.tuya_camera import async_migrate_entry
 from custom_components.tuya_camera.config_flow import entry_data
