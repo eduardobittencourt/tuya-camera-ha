@@ -47,9 +47,9 @@ jobs:
       - name: Install hash-locked test dependencies
         run: |
           pip install --require-hashes --only-binary=:all: -r requirements-build.txt
-          # These five dependencies have no suitable wheel; source hashes are locked.
+          # These four dependencies have no suitable wheel; source hashes are locked.
           pip install --require-hashes --only-binary=:all: \
-            --no-binary=aiortc,mock-open,pyric,pyturbojpeg,tuya-mobile \
+            --no-binary=aiortc,pyric,pyturbojpeg,tuya-mobile \
             --no-build-isolation -r requirements-test.txt
       - run: ruff check custom_components tests scripts
       - run: python scripts/check_repository.py
@@ -114,7 +114,7 @@ jobs:
           pip install --timeout 15 --retries 2 --require-hashes --only-binary=:all: -r requirements-build.txt
           # Source builds use the same hash-locked inputs and build tools as Python tests.
           pip install --timeout 15 --retries 2 --require-hashes --only-binary=:all: \
-            --no-binary=aiortc,mock-open,pyric,pyturbojpeg,tuya-mobile \
+            --no-binary=aiortc,pyric,pyturbojpeg,tuya-mobile \
             --no-build-isolation -r requirements-test.txt
           pip install --timeout 15 --retries 2 --require-hashes --no-deps --only-binary=:all: -r requirements-media.txt
           python -c 'import imageio_ffmpeg; print("TEST_FFMPEG_BINARY=" + imageio_ffmpeg.get_ffmpeg_exe())' >> "$GITHUB_ENV"
@@ -184,7 +184,7 @@ jobs:
           test -s coverage-data/coverage-js.lcov
       - name: Combine coverage and export XML
         run: |
-          python -m pip install --only-binary=:all: 'coverage==7.16.2'
+          python -m pip install --only-binary=:all: 'coverage==7.17.2'
           python -m coverage combine coverage-data
           python -m coverage xml -o coverage.xml
       - name: Read integration version

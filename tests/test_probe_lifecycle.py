@@ -26,11 +26,11 @@ def reject_external_stun(connection):
         "PRIORITY": 1, "ICE-CONTROLLING": 1,
     })
     message.add_message_integrity(connection.local_password.encode())
-    raw = bytes(message)
-    stun.parse_message(raw, integrity_key=connection.local_password.encode())
+    message = stun.parse_message(bytes(message))
+    assert message.check_message_integrity(connection.local_password.encode())
     protocol = connection._protocols[0]
     with patch.object(protocol, "send_stun") as reply, patch.object(connection, "check_incoming") as check:
-        connection.request_received(message, ("192.0.2.10", 23456), protocol, raw)
+        connection.request_received(message, ("192.0.2.10", 23456), protocol)
     reply.assert_not_called()
     check.assert_not_called()
     assert all(c.host == "127.0.0.1" for c in connection.remote_candidates)
