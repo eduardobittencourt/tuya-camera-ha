@@ -2,9 +2,10 @@
 
 Use Python 3.14.8 or newer in the 3.14 series for the Linux CI environment.
 `pyproject.toml` declares test dependencies; `requirements-test.txt` locks the
-resolved versions and hashes. Home Assistant and its pytest plugin pins must
-be updated together, followed by a lock refresh. No Go toolchain is
-required. Read [AGENTS.md](../../AGENTS.md) before changing protocol code.
+resolved versions and hashes. Home Assistant and the official
+`pytest-homeassistant` plugin pins must be updated together, followed by a lock
+refresh. No Go toolchain is required. Read [AGENTS.md](../../AGENTS.md) before
+changing protocol code.
 
 Use the pins in `pyproject.toml` and the lockfiles as the source of truth for
 the HA test environment. Keep runtime and development dependencies distinct.
@@ -13,7 +14,7 @@ the HA test environment. Keep runtime and development dependencies distinct.
 uv venv --python 3.14
 uv pip install --require-hashes --only-binary=:all: -r requirements-build.txt
 uv pip install --require-hashes --only-binary=:all: \
-  --no-binary=aiortc,mock-open,pyric,pyturbojpeg,tuya-mobile \
+  --no-binary=aiortc,pyric,pyturbojpeg,tuya-mobile \
   --no-build-isolation -r requirements-test.txt
 .venv/bin/ruff check custom_components tests scripts
 .venv/bin/pytest -m 'not media'
@@ -25,7 +26,7 @@ node --test --experimental-test-coverage --test-reporter=spec --test-reporter-de
 
 The lock targets CPython 3.14 on Linux x86-64, matching CI. On other development
 platforms, install `.[test]` from `pyproject.toml` and retain the same direct pins.
-The five explicit source exceptions have no suitable wheels. Their archives are
+The four explicit source exceptions have no suitable wheels. Their archives are
 hash-locked; build isolation is disabled so builds use the hash-locked tools in
 `requirements-build.txt` instead of downloading additional build dependencies.
 The aiortc archive still uses the same pinned upstream commit as the integration.
@@ -39,6 +40,13 @@ uv pip compile pyproject.toml --extra test --generate-hashes --python-version 3.
 printf 'setuptools>=77\nwheel\n' | uv pip compile - --generate-hashes \
   --python-version 3.14.8 --output-file requirements-build.txt --no-annotate
 ```
+
+The official plugin enables custom integrations by default. Tests import helpers
+from `pytest_homeassistant`; `-p no:respx` lets Home Assistant install its HTTP
+client alias before respx loads, as required by the plugin. Coverage and test
+timeouts are declared explicitly rather than inherited from the old plugin.
+The synthetic WebRTC probe uses the pinned aioice 0.13 API, including its
+separate STUN integrity check.
 
 A regression test checks that every declared test dependency matches the lock.
 Dependabot changes to direct pins must include the corresponding lock refresh.

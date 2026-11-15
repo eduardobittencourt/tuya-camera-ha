@@ -162,10 +162,11 @@ async def test_probe_restricts_authenticated_peer_reflexive_learning(host):
     message.add_message_integrity(connection.local_password.encode())
     raw = bytes(message)
     # Prove this is authenticated input, rather than a packet rejected as corrupt.
-    stun.parse_message(raw, integrity_key=connection.local_password.encode())
+    message = stun.parse_message(raw)
+    assert message.check_message_integrity(connection.local_password.encode())
     try:
         with patch.object(connection, "check_start_task") as check:
-            connection.request_received(message, (host, 23456), protocol, raw)
+            connection.request_received(message, (host, 23456), protocol)
         if host == "127.0.0.1":
             protocol.send_stun.assert_called_once()
             check.assert_called_once()
